@@ -30,15 +30,21 @@ app.use(express.json({ limit: '10kb' })); // Body limit is 10kb
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // API Routes
+import routes from './routes/index.js';
+
+// Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
+
+// Register API routes
+app.use('/api', routes);
 
 // Error handling
 app.use(errorHandler);
 
 // Handle unhandled routes
-app.use('*', (req, res) => {
+app.use('*', (req, res) => {  
   res.status(404).json({
     status: 'error',
     message: `Can't find ${req.originalUrl} on this server!`

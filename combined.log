@@ -1,0 +1,117 @@
+2025-03-01T02:26:53.731Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:28:24.727Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:28:24 +0000] "GET /api HTTP/1.1" 404 62 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:32:35.014Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:32:35 +0000] "GET /api HTTP/1.1" 404 62 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:33:18.131Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:33:18 +0000] "GET /api HTTP/1.1" 404 62 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:34:28.876Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:34:31.137Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:34:31 +0000] "GET /api HTTP/1.1" 404 142 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:34:38.374Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:34:49.101Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:34:49 +0000] "GET /api/ HTTP/1.1" 404 63 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:35:05.897Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:35:07.184Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:35:07 +0000] "GET /api HTTP/1.1" 404 62 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:35:12.537Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:35:34.559Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:35:34 +0000] "GET /health HTTP/1.1" 200 15 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:35:54.692Z [[31merror[39m]: Error: Not implemented yet
+2025-03-01T02:35:54.693Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:35:54 +0000] "GET /api/users HTTP/1.1" 501 50 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:36:18.498Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:36:22.535Z [[31merror[39m]: Error: Not implemented yet
+2025-03-01T02:36:22.538Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:36:22 +0000] "GET /api/users HTTP/1.1" 501 50 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:36:28.653Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:36:44.862Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:36:50.434Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:38:32.205Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:38:46.294Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:39:01.174Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:41:38.109Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:41:39.638Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:41:46.395Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:42:07.462Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:42:11.914Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:42:17.481Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:42:26.147Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:42:32.197Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:42:33.378Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:43:01.273Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:43:05.324Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:43:30.860Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:43:45.960Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:43:57.579Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:44:01.541Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:44:50.466Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:44:52.986Z [[31merror[39m]: Error: Not implemented yet
+2025-03-01T02:44:52.990Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:44:52 +0000] "GET /api/users HTTP/1.1" 501 50 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:45:19.895Z [[31merror[39m]: Error: Not implemented yet
+2025-03-01T02:45:19.896Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:45:19 +0000] "GET /api/users HTTP/1.1" 501 50 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:45:55.017Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:46:17.239Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:46:19.945Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:46:32.068Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:46:34.617Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:46:37.874Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:46:49.148Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:46:50.831Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:46:54.030Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:46:54 +0000] "GET /api/users HTTP/1.1" 200 30 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:47:06.113Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:47:08.655Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:47:08 +0000] "GET /api/users HTTP/1.1" 200 30 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:47:13.008Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:47:13 +0000] "GET /api/users HTTP/1.1" 200 30 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:47:26.066Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:47:26 +0000] "GET /api/users HTTP/1.1" 200 30 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:47:47.823Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:47:57.673Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:47:59.426Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:48:01.079Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:48:07.318Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:48:09.321Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:48:15.214Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:48:15 +0000] "GET /api/users HTTP/1.1" 200 30 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:48:20.991Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:48:20 +0000] "GET /api/users HTTP/1.1" 200 30 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:48:40.195Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:48:48.034Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:02:48:48 +0000] "GET /api/users HTTP/1.1" 500 33 "-" "PostmanRuntime/7.43.0"
+2025-03-01T02:49:01.318Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:49:10.366Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T02:49:11.822Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:49:38.753Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:49:40.024Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:49:41.649Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:49:48.912Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:03:49:48 +0000] "GET /api/users HTTP/1.1" 200 308 "-" "PostmanRuntime/7.43.0"
+2025-03-01T03:52:21.522Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:55:50.717Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:55:54.447Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:56:17.402Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:56:23.245Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:56:27.879Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:56:29.835Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:56:32.950Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:56:37.454Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:56:57.125Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:56:58.558Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:57:00.121Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:57:02.272Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:57:06.684Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:57:09.685Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:57:13.981Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:57:16.457Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:57:18.279Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:57:32.169Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:57:37.273Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:57:40.838Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:57:42.226Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:57:47.444Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:58:14.382Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:58:18.072Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:58:24.609Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:58:26.255Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:58:27.477Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:58:35.425Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:58:36.710Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:58:53.526Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:58:57.941Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:59:06.227Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:59:07.498Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:59:11.453Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:59:14.421Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:59:16.050Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:59:21.593Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:59:30.489Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:59:42.051Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T03:59:54.254Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T04:03:59.796Z [[32minfo[39m]: Server is running on port 3000
+2025-03-01T04:04:04.121Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:04:04:04 +0000] "POST /api/users HTTP/1.1" 201 163 "-" "PostmanRuntime/7.43.0"
+2025-03-01T04:04:32.342Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [01/Mar/2025:04:04:32 +0000] "PUT /api/users/6 HTTP/1.1" 200 163 "-" "PostmanRuntime/7.43.0"

@@ -2,3 +2,129 @@
 2025-03-01T02:36:22.535Z [[31merror[39m]: Error: Not implemented yet
 2025-03-01T02:44:52.986Z [[31merror[39m]: Error: Not implemented yet
 2025-03-01T02:45:19.895Z [[31merror[39m]: Error: Not implemented yet
+2025-03-01T05:30:51.792Z [[31merror[39m]: Error: The "data" argument must be of type string or an instance of Buffer, TypedArray, or DataView. Received undefined
+2025-03-01T05:31:40.803Z [[31merror[39m]: Error: The "data" argument must be of type string or an instance of Buffer, TypedArray, or DataView. Received undefined
+2025-03-01T05:32:05.464Z [[31merror[39m]: Error: The "data" argument must be of type string or an instance of Buffer, TypedArray, or DataView. Received undefined
+2025-03-01T05:32:46.175Z [[31merror[39m]: Error: The "data" argument must be of type string or an instance of Buffer, TypedArray, or DataView. Received undefined
+2025-03-01T05:34:16.029Z [[31merror[39m]: Error: The "data" argument must be of type string or an instance of Buffer, TypedArray, or DataView. Received undefined
+2025-03-01T05:34:50.116Z [[31merror[39m]: Error: Unknown database 'tb_user'
+2025-03-01T05:35:44.144Z [[31merror[39m]: Error: Unknown database 'tb_user'
+2025-03-01T05:36:22.965Z [[31merror[39m]: Error: Unknown database 'tb_user'
+2025-03-01T05:36:50.060Z [[31merror[39m]: Error: Unknown database 'tb_user'
+2025-03-01T05:42:32.673Z [[31merror[39m]: Error: 
+Invalid `prisma.users.create()` invocation:
+
+{
+  data: {
+    kode_pegawai: 7,
+    password: "a6a0c55424746c3c1df95c8212421673:327df6b1fe80b1ec8683270c741f0d99",
+    role: "d"
+          ~~~
+  }
+}
+
+Argument `role`: Invalid value provided. Expected Int or Null, provided String.
+2025-03-01T05:53:53.270Z [[31merror[39m]: Error: 
+Invalid `prisma.users.create()` invocation:
+
+{
+  data: {
+    kode_pegawai: 7,
+    password: "af3fdaf8b640e9d860b2d2d7cfa0b656:9af636ea690c579388503f75dcb02086",
+    role: "d"
+          ~~~
+  }
+}
+
+Argument `role`: Invalid value provided. Expected Int or Null, provided String.
+2025-03-01T05:55:31.528Z [[31merror[39m]: Error: 
+Invalid `prisma.users.create()` invocation:
+
+{
+  data: {
+    kode_pegawai: 7,
+    password: "a84f0621fd300c8369610e551be7d71d:ccf73dd9f2f12f94ac81e96abaf556fc",
+    role: "d"
+          ~~~
+  }
+}
+
+Argument `role`: Invalid value provided. Expected Int or Null, provided String.
+2025-03-01T05:56:52.103Z [[31merror[39m]: Error: 
+Invalid `prisma.users.create()` invocation:
+
+{
+  data: {
+    kode_pegawai: 7,
+    password: "177251d818e26cd4b21338b55e1e94cb:13e4e2ef7d3c07caa4823503f7db14c3",
+    role: "d"
+          ~~~
+  }
+}
+
+Argument `role`: Invalid value provided. Expected Int or Null, provided String.
+2025-03-01T05:58:04.387Z [[31merror[39m]: Error: 
+Invalid `prisma.users.create()` invocation:
+
+{
+  data: {
+    kode_pegawai: 7,
+    password: "6bea32e6d51c3846ab65b5d8ad15d95d:c41c8ff2d7712595c951cb01c797a7d6",
+    role: "d"
+          ~~~
+  }
+}
+
+Argument `role`: Invalid value provided. Expected Int or Null, provided String.
+2025-03-01T05:58:18.211Z [[31merror[39m]: Error: 
+Invalid `prisma.users.create()` invocation:
+
+{
+  data: {
+    kode_pegawai: 7,
+    password: "6e296dc8509e8e12e0cdb1653a00bf15:20d42e175cda15450fb9cdd2d5abe29d",
+    role: "d"
+          ~~~
+  }
+}
+
+Argument `role`: Invalid value provided. Expected Int or Null, provided String.
+2025-03-01T05:59:48.418Z [[31merror[39m]: Error: 
+Invalid `prisma.users.create()` invocation:
+
+{
+  data: {
+    kode_pegawai: 7,
+    password: "f84ae9af6c276201a9cd38e96deb8ced:5b3ef1105d642c8d0989e0a6e3362278",
+    role: "d"
+          ~~~
+  }
+}
+
+Argument `role`: Invalid value provided. Expected Int or Null, provided String.
+2025-03-01T06:00:03.039Z [[31merror[39m]: Error: 
+Invalid `prisma.users.create()` invocation:
+
+{
+  data: {
+    kode_pegawai: 7,
+    password: "fccaaa2392a6ec716b66d45a3f596710:aeb5725be5cbd5d7356df0f0d20deba8",
+    role: "d"
+          ~~~
+  }
+}
+
+Argument `role`: Invalid value provided. Expected Int or Null, provided String.
+2025-03-01T06:06:09.949Z [[31merror[39m]: Error: 
+Invalid `prisma.users.create()` invocation:
+
+{
+  data: {
+    kode_pegawai: 7,
+    password: "93363d5ffebcfd5198adf7a452cc37e6:e49ad86e5dfd897668d127a90838f0b7",
+    role: "d"
+          ~~~
+  }
+}
+
+Argument `role`: Invalid value provided. Expected Int or Null, provided String.

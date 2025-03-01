@@ -1,6 +1,7 @@
 import { AppError } from '../middleware/errorHandler.js';
 import { prisma } from '../prisma.js';
 import { encrypt, decrypt } from '../helpers.js';
+import mysql from 'mysql2/promise';
 
 // Create User
 export const createUser = async (req, res, next) => {
@@ -120,6 +121,45 @@ export const deleteUser = async (req, res, next) => {
     });
 
     res.status(200).json({ message: 'User deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const migrateUsers = async (req, res, next) => {
+  try {
+    // Konfigurasi koneksi ke database lama
+    const connection = await mysql.createConnection({
+      host: process.env.OLD_DB_HOST, // Host database lama
+      user: process.env.OLD_DB_USER, // User database lama
+      password: process.env.OLD_DB_PASSWORD, // Password database lama
+      database: process.env.OLD_DB_NAME, // Nama database lama
+    });
+
+    // Ambil semua data dari tabel lama
+    const [rows] = await connection.execute('SELECT * FROM tb_user');
+
+    // Tutup koneksi ke database lama
+    await connection.end();
+
+    // Loop melalui setiap baris data dan masukkan ke tabel baru
+    for (const row of rows) {
+      const { kd_gp, pas2, ket } = row;
+
+      // Hash password dari kolom `pas2`
+      const hashedPassword = encrypt(pas2);
+
+      // Buat user baru di tabel baru
+      await prisma.users.create({
+        data: {
+          kode_pegawai: parseInt(kd_gp), // Konversi kd_gp ke number
+          password: hashedPassword, // Simpan password yang sudah di-hash
+          role: ket
+        },
+      });
+    }
+
+    res.status(200).json({ message: 'Data migrated successfully' });
   } catch (error) {
     next(error);
   }

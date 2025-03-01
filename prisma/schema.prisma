@@ -112,5 +112,14 @@ model users {
   id           Int     @id @default(autoincrement())
   kode_pegawai Int?
   password     String? @db.VarChar(255)
-  role         Int?
+  role         String? @db.VarChar(2)
+}
+
+model data_pengajar {
+  id         Int    @id @default(autoincrement())
+  thn_ajaran String @db.VarChar(10)
+  semester   String @db.VarChar(2)
+  kd_guru    String @db.VarChar(5)
+  kd_mapel   String @db.VarChar(5)
+  kd_kelas   String @db.VarChar(5)
 }

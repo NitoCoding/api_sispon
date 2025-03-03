@@ -113,6 +113,7 @@ model users {
   kode_pegawai Int?
   password     String? @db.VarChar(255)
   role         String? @db.VarChar(2)
+  refreshTokens     RefreshToken[]
 }
 
 model data_pengajar {
@@ -122,4 +123,109 @@ model data_pengajar {
   kd_guru    String @db.VarChar(5)
   kd_mapel   String @db.VarChar(5)
   kd_kelas   String @db.VarChar(5)
+}
+
+model data_kelas {
+  id           Int     @id @default(autoincrement())
+  id_kelas     Int?
+  tahun_ajaran String? @db.VarChar(100)
+}
+
+model data_kelas_pengajar {
+  id       Int  @id
+  id_gp    Int?
+  id_kelas Int?
+}
+
+model data_kelas_santri {
+  id        Int     @id @default(autoincrement())
+  id_kelas  Int?
+  id_santri String? @db.VarChar(100)
+}
+
+model data_wali_kelas {
+  id       Int  @id
+  id_gp    Int?
+  id_kelas Int?
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  users     users    @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+}
+
+model santri {
+  id           Int                 @id @default(autoincrement())
+  nis_nasional String              @db.VarChar(100)
+  nis          String              @db.VarChar(100)
+  nama         String?             @db.VarChar(100)
+  foto         String?             @db.VarChar(100)
+  jk           santri_jk?
+  tempat_ttl   String?             @db.VarChar(100)
+  tgl_ttl      DateTime?           @db.Date
+  agama        String?             @db.VarChar(50)
+  kesukuan     String?             @db.VarChar(50)
+  anak_ke      Int?
+  tinggi       Decimal?            @db.Decimal(5, 2)
+  berat        Decimal?            @db.Decimal(5, 2)
+  gol_darah    String?             @db.VarChar(3)
+  hobi         String?             @db.Text
+  email        String?             @db.VarChar(100)
+  status       santri_status_enum?
+  id_jenjang   Int?
+  warna_kulit  String?             @db.VarChar(100)
+}
+
+model santri_kesehatan {
+  id               Int     @id @default(autoincrement())
+  id_santri        Int?
+  riwayat_penyakit String? @db.Text
+}
+
+model santri_kontak {
+  id        Int     @id @default(autoincrement())
+  id_santri String? @db.VarChar(100)
+  telepon   String? @db.VarChar(100)
+  alamat    String? @db.Text
+  provinsi  String? @db.VarChar(100)
+  kota      String? @db.VarChar(100)
+  kode_pos  String? @db.VarChar(100)
+}
+
+model santri_pendidikan {
+  id              Int     @id @default(autoincrement())
+  id_santri       Int?
+  asal_sekolah    String? @db.VarChar(100)
+  alamat_sekolah  String? @db.Text
+  nilai_ujian_sd  String? @db.VarChar(100)
+  nilai_ujian_smp String? @db.VarChar(100)
+  no_skhun        String? @db.VarChar(100)
+  tahun_skhun     Int?    @db.Year
+}
+
+model santri_status {
+  id                 Int       @id @default(autoincrement())
+  id_santri          Int?
+  tahun_ajaran_masuk String?   @db.VarChar(9)
+  tahun_ajaran_tamat String?   @db.VarChar(9)
+  tgl_masuk          DateTime? @db.Date
+  tgl_keluar         DateTime? @db.Date
+  pindahan           Boolean?
+  alasan_pindah      String?   @db.Text
+  lanjut_ke          String?   @db.VarChar(100)
+}
+
+enum santri_jk {
+  L
+  P
+}
+
+enum santri_status_enum {
+  Aktif
+  Tidak_Aktif @map("Tidak Aktif")
+  Alumni
+  Pindah
 }

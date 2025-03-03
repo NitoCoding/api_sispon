@@ -8,8 +8,9 @@ import { createUser,
     getUserById, 
     migrateUsers, 
     updateUser } from '../controllers/user.controller.js';
+import { authenticate } from '../middleware/auth.middleware.js';
 
-router.get('/users', getAllUsers);
+router.get('/users', authenticate, getAllUsers);
 router.get('/users/:id', getUserById);
 router.post('/users', createUser);
 router.put('/users/:id', updateUser);

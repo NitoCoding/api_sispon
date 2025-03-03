@@ -36,9 +36,13 @@ app.get('/health', (req, res) => {
 
 // API Routes
 import userRoutes from './routes/user.route.js';
+import authRoutes from './routes/auth.route.js';
 
 // Register API routes
-app.use('/api', userRoutes);
+// app.use('/api');
+
+app.use('/users', userRoutes);
+app.use('/auth', authRoutes);
 
 // Error handling
 app.use(errorHandler);

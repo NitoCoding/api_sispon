@@ -128,3 +128,10 @@ Invalid `prisma.users.create()` invocation:
 }
 
 Argument `role`: Invalid value provided. Expected Int or Null, provided String.
+2025-03-03T04:38:22.890Z [[31merror[39m]: Error: bcrypt is not defined
+2025-03-03T04:40:13.793Z [[31merror[39m]: Error: bcrypt is not defined
+2025-03-03T04:41:28.118Z [[31merror[39m]: Error: Cannot read properties of undefined (reading 'deleteMany')
+2025-03-03T04:43:39.517Z [[31merror[39m]: Error: Cannot read properties of undefined (reading 'deleteMany')
+2025-03-03T04:45:18.364Z [[31merror[39m]: Error: Cannot read properties of undefined (reading 'deleteMany')
+2025-03-03T05:32:46.862Z [[31merror[39m]: Unhandled Rejection: userId is not defined
+2025-03-03T05:36:49.792Z [[31merror[39m]: Unhandled Rejection: userId is not defined

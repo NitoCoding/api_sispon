@@ -485,3 +485,7 @@ Argument `role`: Invalid value provided. Expected Int or Null, provided String.
 2025-03-03T06:39:14.027Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [03/Mar/2025:06:39:14 +0000] "GET /users/users HTTP/1.1" 403 35 "-" "PostmanRuntime/7.43.0"
 2025-03-03T06:39:33.231Z [[32minfo[39m]: Server is running on port 3000
 2025-03-03T06:40:00.170Z [[32minfo[39m]: Server is running on port 3000
+2025-03-03T06:46:48.720Z [[32minfo[39m]: Server is running on port 3000
+2025-03-03T06:46:57.423Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [03/Mar/2025:06:46:57 +0000] "GET /auth/login HTTP/1.1" 200 266 "-" "PostmanRuntime/7.43.0"
+2025-03-03T06:47:09.352Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [03/Mar/2025:06:47:09 +0000] "GET /users/users HTTP/1.1" 200 - "-" "PostmanRuntime/7.43.0"
+2025-03-03T06:47:17.314Z [[32minfo[39m]: ::ffff:127.0.0.1 - - [03/Mar/2025:06:47:17 +0000] "GET /users/users HTTP/1.1" 403 27 "-" "PostmanRuntime/7.43.0"

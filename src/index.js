@@ -56,7 +56,7 @@ app.use('*', (req, res) => {
 });
 
 // Start server
-const PORT = config.port || 3000;
+const PORT = config.port;
 app.listen(PORT, () => {
   logger.info(`Server is running on port ${PORT}`);
 });

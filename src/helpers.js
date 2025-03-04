@@ -1,7 +1,8 @@
 import crypto from 'crypto';
+import { config } from './config/index.js';
 
 const algorithm = 'aes-256-cbc';
-const secret = process.env.SECRET_KEY
+const secret = config.secretKey;
 const secretKey = crypto.createHash('sha256').update(secret).digest('base64').substr(0, 32); // Ensure the key is 32 bytes
 const ivLength = 16; // For AES, this is always 16
 

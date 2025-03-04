@@ -23,7 +23,7 @@ export const logger = winston.createLogger({
   exitOnError: false
 });
 
-// Handle uncaught exceptions and unhandled rejections
+Handle uncaught exceptions and unhandled rejections
 process.on('uncaughtException', (error) => {
   logger.error('Uncaught Exception:', error);
   process.exit(1);

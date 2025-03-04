@@ -1,6 +1,5 @@
 import { AppError } from '../middleware/errorHandler.js';
 import { JWTService } from '../services/jwt.service.js';
-import { compare } from 'bcrypt';
 import { encrypt, decrypt } from '../helpers.js';
 import { prisma } from '../prisma.js';
 

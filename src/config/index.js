@@ -5,10 +5,11 @@ dotenv.config();
 
 export const config = {
   env: process.env.NODE_ENV || 'development',
-  port: process.env.PORT || 3000,
+  port: process.env.PORT,
   dbUri: process.env.DATABASE_URL,
   dbUser: process.env.DATABASE_USER,
   dbPassword: process.env.DATABASE_PASSWORD,
+  secretKey: process.env.SECRET_KEY,
   jwtSecret: process.env.JWT_SECRET || '^!F1Z7477!78u3r*0P',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1d',
   // Add other configuration variables as needed

@@ -6,7 +6,9 @@ dotenv.config();
 export const config = {
   env: process.env.NODE_ENV || 'development',
   port: process.env.PORT || 3000,
-  dbUri: process.env.MONGODB_URI || 'mariadb://66.42.60.252:3306/new_siakad',
+  dbUri: process.env.DATABASE_URL,
+  dbUser: process.env.DATABASE_USER,
+  dbPassword: process.env.DATABASE_PASSWORD,
   jwtSecret: process.env.JWT_SECRET || '^!F1Z7477!78u3r*0P',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1d',
   // Add other configuration variables as needed

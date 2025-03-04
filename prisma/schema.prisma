@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model data_adab_asrama {
+  id Int @id
+}
+
+model data_adab_sekolah {
+  id Int @id @default(autoincrement())
+}
+
+model data_ibadah_asrama {
+  id Int @id
+}
+
+model data_kompetensi_inti {
+  id            Int    @id @default(autoincrement())
+  kd_kompetensi String @db.VarChar(5)
+  tahun_ajaran  String @db.VarChar(9)
+  semester      String @db.Char(2)
+  kelas         String @db.Char(2)
+  mapel         String @db.VarChar(5)
+  guru          String @db.VarChar(3)
+  kd1           String @db.Text
+  kd2           String @db.Text
+  kd3           String @db.Text
+  kd4           String @db.Text
+  kd5           String @db.Text
+  kd6           String @db.Text
+  kd7           String @db.Text
+  kd8           String @db.Text
+}
+
+model guru_pegawai {
+  id                Int       @id @default(autoincrement())
+  nip               String    @unique(map: "guru_pegawai_unique") @db.VarChar(35)
+  tahun_terdaftar   Int?
+  nama_gp           String?   @db.VarChar(100)
+  foto_gp           String?   @db.VarChar(100)
+  jk                String?   @db.Char(1)
+  tempat_ttl        String?   @db.VarChar(100)
+  tgl_ttl           DateTime? @db.Date
+  status_pernikahan String?   @db.Char(1)
+  jumlah_anak       String?   @db.Char(2)
+  pendidikan        String?   @db.VarChar(100)
+  jabatan           String?   @db.VarChar(100)
+  ket_jabatan       String?   @db.VarChar(100)
+  status_gp         String?   @db.Char(1)
+  status_kp         String?   @db.Char(1)
+  unit              String?   @db.VarChar(100)
+  alamat            String?   @db.VarChar(100)
+  telepon           String?   @db.VarChar(100)
+}
+
+model jabatan {
+  id Int @id @default(autoincrement())
+}
+
+model ref_jam {
+  id           Int    @id @default(autoincrement())
+  jam          String @db.VarChar(11)
+  jml_jam      Int?
+  jumlah_menit Int?
+}
+
+model ref_kelas {
+  id            Int     @id @default(autoincrement())
+  kode          Int     @unique(map: "ref_kelas_unique")
+  kelas         String? @db.VarChar(10)
+  kapasitas     Int?
+  jumlah_meja   Int?
+  meja_rusak    Int?
+  jumlah_kursi  Int?
+  kursi_rusak   Int?
+  jumlah_lemari Int?
+  lemari_rusak  Int?
+  jumlah_ptulis Int?
+  ptulis_rusak  Int?
+  proyektor     Int?
+}
+
+model ref_kelompok_lokasi {
+  id   Int     @id @default(autoincrement())
+  nama String? @db.VarChar(100)
+}
+
+model ref_lokasi {
+  id       Int     @id @default(autoincrement())
+  kelompok Int?
+  nama     String? @db.VarChar(100)
+}
+
+model ref_mapel {
+  id         Int     @id @default(autoincrement())
+  kode       String  @db.VarChar(10)
+  nama       String? @db.VarChar(100)
+  kkm_1      Int?
+  kkm_2      Int?
+  kkm_3      Int?
+  keterangan String? @db.VarChar(100)
+
+  @@unique([kode, keterangan], map: "ref_mapel_kode_IDX")
+}
+
+model users {
+  id           Int     @id @default(autoincrement())
+  kode_pegawai Int?
+  password     String? @db.VarChar(255)
+  role         String? @db.VarChar(2)
+  refreshTokens     RefreshToken[]
+}
+
+model data_pengajar {
+  id         Int    @id @default(autoincrement())
+  thn_ajaran String @db.VarChar(10)
+  semester   String @db.VarChar(2)
+  kd_guru    String @db.VarChar(5)
+  kd_mapel   String @db.VarChar(5)
+  kd_kelas   String @db.VarChar(5)
+}
+
+model data_kelas {
+  id           Int     @id @default(autoincrement())
+  id_kelas     Int?
+  tahun_ajaran String? @db.VarChar(100)
+}
+
+model data_kelas_pengajar {
+  id       Int  @id
+  id_gp    Int?
+  id_kelas Int?
+}
+
+model data_kelas_santri {
+  id        Int     @id @default(autoincrement())
+  id_kelas  Int?
+  id_santri String? @db.VarChar(100)
+}
+
+model data_wali_kelas {
+  id       Int  @id
+  id_gp    Int?
+  id_kelas Int?
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  users     users    @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+}
+
+model santri {
+  id           Int                 @id @default(autoincrement())
+  nis_nasional String              @db.VarChar(100)
+  nis          String              @db.VarChar(100)
+  nama         String?             @db.VarChar(100)
+  foto         String?             @db.VarChar(100)
+  jk           santri_jk?
+  tempat_ttl   String?             @db.VarChar(100)
+  tgl_ttl      DateTime?           @db.Date
+  agama        String?             @db.VarChar(50)
+  kesukuan     String?             @db.VarChar(50)
+  anak_ke      Int?
+  tinggi       Decimal?            @db.Decimal(5, 2)
+  berat        Decimal?            @db.Decimal(5, 2)
+  gol_darah    String?             @db.VarChar(3)
+  hobi         String?             @db.Text
+  email        String?             @db.VarChar(100)
+  status       santri_status_enum?
+  id_jenjang   Int?
+  warna_kulit  String?             @db.VarChar(100)
+}
+
+model santri_kesehatan {
+  id               Int     @id @default(autoincrement())
+  id_santri        Int?
+  riwayat_penyakit String? @db.Text
+}
+
+model santri_kontak {
+  id        Int     @id @default(autoincrement())
+  id_santri String? @db.VarChar(100)
+  telepon   String? @db.VarChar(100)
+  alamat    String? @db.Text
+  provinsi  String? @db.VarChar(100)
+  kota      String? @db.VarChar(100)
+  kode_pos  String? @db.VarChar(100)
+}
+
+model santri_pendidikan {
+  id              Int     @id @default(autoincrement())
+  id_santri       Int?
+  asal_sekolah    String? @db.VarChar(100)
+  alamat_sekolah  String? @db.Text
+  nilai_ujian_sd  String? @db.VarChar(100)
+  nilai_ujian_smp String? @db.VarChar(100)
+  no_skhun        String? @db.VarChar(100)
+  tahun_skhun     Int?    @db.Year
+}
+
+model santri_status {
+  id                 Int       @id @default(autoincrement())
+  id_santri          Int?
+  tahun_ajaran_masuk String?   @db.VarChar(9)
+  tahun_ajaran_tamat String?   @db.VarChar(9)
+  tgl_masuk          DateTime? @db.Date
+  tgl_keluar         DateTime? @db.Date
+  pindahan           Boolean?
+  alasan_pindah      String?   @db.Text
+  lanjut_ke          String?   @db.VarChar(100)
+}
+
+enum santri_jk {
+  L
+  P
+}
+
+enum santri_status_enum {
+  Aktif
+  Tidak_Aktif @map("Tidak Aktif")
+  Alumni
+  Pindah
+}

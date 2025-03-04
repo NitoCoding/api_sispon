@@ -1,20 +1,57 @@
 import { JWTService } from '../services/jwt.service.js';
 import { AppError } from './errorHandler.js';
+import { config } from '../config/index.js';
+import { prisma } from '../prisma.js';
 
 export const authenticate = async (req, res, next) => {
   try {
-    // Extract token from header
+    const secretKey = new TextEncoder().encode(config.jwtSecret);
+
     const token = JWTService.extractTokenFromHeader(req);
 
-    // Verify token
-    const decoded = JWTService.verifyToken(token);
+    // Cek apakah token ada di PublicToken atau RefreshToken
+    let payload;
 
-    // Add user data to request object
-    req.user = decoded;
+    // Cek RefreshToken jika bukan PublicToken
+    try {
+      ({ payload } = await JWTService.verifyToken(token, secretKey));  // Verifikasi access token biasa
+    } catch (err) {
+      if (err.message === "Token has expired") {
+        // Token expired, cek dan refresh token
+        const refreshTokenRecord = await prisma.RefreshToken.findFirst({
+          where: { userId: err.payload?.userId },
+        });
 
+        if (!refreshTokenRecord) {
+          return res.status(403).json({ message: "No refresh token found for this user" });
+        }
+
+        // Verifikasi refresh token
+        const refreshTokenPayload = await JWTService.verifyToken(refreshTokenRecord.token, secretKey);
+
+        const newAccessUser = await prisma.users.findUnique({
+          where: { id: refreshTokenPayload.userId },
+        });
+
+        // Generate a new access token
+        const newAccessToken = await JWTService.generateToken({
+          userId: newAccessUser.userId,
+          role: newAccessUser.role,
+        });
+
+        req.user = newAccessUser;
+
+        res.setHeader("new-authorization", `Bearer ${newAccessToken}`);
+        return next();
+      }
+      return res.status(403).json({ message: "Invalid token" });
+    }
+
+    // Token valid untuk admin atau user terautentikasi
+    req.user = payload;
     next();
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    res.status(403).json({ message: "Authentication failed" });
   }
 };
 

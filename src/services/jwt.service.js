@@ -3,20 +3,27 @@ import { config } from '../config/index.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 export class JWTService {
-  static async generateTokens(payload) {
-    const secret = new TextEncoder().encode(config.jwtSecret);
+  static async generateToken(payload, expiresIn = '15s') {
+    const secretKey = new TextEncoder().encode(config.jwtSecret);
     
-    const accessToken = await new jose.SignJWT(payload)
-      .setProtectedHeader({ alg: 'HS256' })
-      .setExpiresIn(config.jwtExpiresIn)
-      .sign(secret);
+    // const accessToken = await new jose.SignJWT(payload)
+    //   .setProtectedHeader({ alg: 'HS256' })
+    //   .setExpiresIn(config.jwtExpiresIn)
+    //   .sign(secret);
 
-    const refreshToken = await new jose.SignJWT(payload)
-      .setProtectedHeader({ alg: 'HS256' })
-      .setExpiresIn('7d')
-      .sign(secret);
+    // const refreshToken = await new jose.SignJWT(payload)
+    //   .setProtectedHeader({ alg: 'HS256' })
+    //   .setExpiresIn('7d')
+    //   .sign(secret);
 
-    return { accessToken, refreshToken };
+    // return { accessToken, refreshToken };
+
+    const jwt = await new jose.SignJWT(payload)
+      .setProtectedHeader({ alg: 'HS256' })
+      .setExpirationTime(expiresIn)
+      .sign(secretKey);
+    
+    return jwt;
   }
 
   static async verifyToken(token) {

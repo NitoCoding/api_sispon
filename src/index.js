@@ -29,16 +29,20 @@ app.use(morgan('combined', { stream: { write: message => logger.info(message.tri
 app.use(express.json({ limit: '10kb' })); // Body limit is 10kb
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
-// API Routes
-import routes from './routes/index.js';
-
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
+// API Routes
+import userRoutes from './routes/user.route.js';
+import authRoutes from './routes/auth.route.js';
+
 // Register API routes
-app.use('/api', routes);
+// app.use('/api');
+
+app.use('/users', userRoutes);
+app.use('/auth', authRoutes);
 
 // Error handling
 app.use(errorHandler);

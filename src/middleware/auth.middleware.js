@@ -6,18 +6,21 @@ import { prisma } from '../prisma.js';
 export const authenticate = async (req, res, next) => {
   try {
     const secretKey = new TextEncoder().encode(config.jwtSecret);
-
     const token = JWTService.extractTokenFromHeader(req);
 
-    // Cek apakah token ada di PublicToken atau RefreshToken
-    let payload;
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
 
-    // Cek RefreshToken jika bukan PublicToken
+    let payload;
     try {
-      ({ payload } = await JWTService.verifyToken(token, secretKey));  // Verifikasi access token biasa
+      payload  = await JWTService.verifyToken(token, secretKey);
+      if (!payload.role) {
+        return res.status(403).json({ message: "Invalid access token" });
+      }
     } catch (err) {
       if (err.message === "Token has expired") {
-        // Token expired, cek dan refresh token
+        // Token expired, coba refresh token
         const refreshTokenRecord = await prisma.RefreshToken.findFirst({
           where: { userId: err.payload?.userId },
         });
@@ -26,32 +29,37 @@ export const authenticate = async (req, res, next) => {
           return res.status(403).json({ message: "No refresh token found for this user" });
         }
 
-        // Verifikasi refresh token
-        const refreshTokenPayload = await JWTService.verifyToken(refreshTokenRecord.token, secretKey);
+        try {
+          const refreshTokenPayload = await JWTService.verifyToken(refreshTokenRecord.token, secretKey);
 
-        const newAccessUser = await prisma.users.findUnique({
-          where: { id: refreshTokenPayload.userId },
-        });
+          const newAccessUser = await prisma.users.findUnique({
+            where: { id: refreshTokenPayload.userId },
+          });
 
-        // Generate a new access token
-        const newAccessToken = await JWTService.generateToken({
-          userId: newAccessUser.userId,
-          role: newAccessUser.role,
-        });
+          if (!newAccessUser) {
+            return res.status(403).json({ message: "User not found" });
+          }
 
-        req.user = newAccessUser;
+          const newAccessToken = await JWTService.generateToken({
+            userId: newAccessUser.id,
+            role: newAccessUser.role,
+          });
 
-        res.setHeader("new-authorization", `Bearer ${newAccessToken}`);
-        return next();
+          req.user = newAccessUser;
+          res.setHeader("new-authorization", `Bearer ${newAccessToken}`);
+          return next();
+        } catch (refreshErr) {
+          return res.status(403).json({ message: "Invalid refresh token" });
+        }
       }
       return res.status(403).json({ message: "Invalid token" });
     }
 
-    // Token valid untuk admin atau user terautentikasi
+    // Jika token valid, lanjutkan dengan request
     req.user = payload;
     next();
   } catch (err) {
-    res.status(403).json({ message: "Authentication failed" });
+    res.status(500).json({ message: "Authentication failed", error: err.message });
   }
 };
 

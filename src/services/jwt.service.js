@@ -3,7 +3,7 @@ import { config } from '../config/index.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 export class JWTService {
-  static async generateToken(payload, expiresIn = '15s') {
+  static async generateToken(payload, expiresIn = '15m') {
     const secretKey = new TextEncoder().encode(config.jwtSecret);
     
     // const accessToken = await new jose.SignJWT(payload)

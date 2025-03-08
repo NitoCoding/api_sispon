@@ -1,5 +1,5 @@
 # Gunakan base image Node.js
-FROM node:22.12.0-alpine
+FROM node:18-alpine
 
 # Tentukan working directory dalam container
 WORKDIR .
@@ -14,7 +14,7 @@ RUN npm install
 COPY . .
 
 # Expose port sesuai dengan API
-EXPOSE 8000
+EXPOSE 8001
 
 RUN chmod +x node_modules/.bin/nodemon
 

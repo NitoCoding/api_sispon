@@ -4,8 +4,8 @@ import { encrypt, decrypt } from '../helpers.js';
 import { prisma } from '../prisma.js';
 
 export const login = async (req, res, next) => {
-  const { pegId, password } = req.body;
-  if (!pegId || !password) {
+  const { pegId, password, academic_year, semester } = req.body;
+  if (!pegId || !password || !academic_year || !semester) {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
@@ -14,7 +14,6 @@ export const login = async (req, res, next) => {
     const users = await prisma.users.findMany({ 
       where: { kode_pegawai: pegId } 
     });
-    console.log(users);
 
     if (users.length === 0) {
       return res.status(404).json({ message: "User not found" });
@@ -28,14 +27,13 @@ export const login = async (req, res, next) => {
         break; // Keluar dari loop setelah menemukan user yang valid
       }
     }
-    console.log(validUser);
 
     if (!validUser) {
       return res.status(401).json({ message: "Invalid password" });
     }
 
     // Generate access token dan refresh token
-    const accessToken = await JWTService.generateToken({ userId: validUser.id, role: validUser.role });
+    const accessToken = await JWTService.generateToken({ userId: validUser.id, role: validUser.role, academic_year, semester });
     const refreshToken = await JWTService.generateToken({ userId: validUser.id }, '7d');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
@@ -46,7 +44,7 @@ export const login = async (req, res, next) => {
     await prisma.RefreshToken.create({ data: { token: refreshToken, userId: validUser.id, expiresAt } });
 
     // Kirim token ke client
-    res.json({ access_token: accessToken, refresh_token: refreshToken });
+    res.json({ access_token: accessToken });
   } catch (error) {
     next(error);
   }

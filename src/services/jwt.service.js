@@ -39,6 +39,15 @@ export class JWTService {
     }
   }
 
+  static decodeToken(token) {
+    try {
+      const secret = new TextEncoder().encode(config.jwtSecret);
+      return jose.decodeJwt(token);
+    } catch (err) {
+      return null;
+    }
+  }
+
   static extractTokenFromHeader(req) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

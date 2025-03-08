@@ -1,11 +1,9 @@
 import { JWTService } from '../services/jwt.service.js';
 import { AppError } from './errorHandler.js';
-import { config } from '../config/index.js';
 import { prisma } from '../prisma.js';
 
 export const authenticate = async (req, res, next) => {
   try {
-    const secretKey = new TextEncoder().encode(config.jwtSecret);
     const token = JWTService.extractTokenFromHeader(req);
 
     if (!token) {
@@ -14,8 +12,8 @@ export const authenticate = async (req, res, next) => {
 
     let payload;
     try {
-      payload  = await JWTService.verifyToken(token, secretKey);
-      if (!payload.role) {
+      payload  = await JWTService.verifyToken(token);
+      if (!payload.role || !payload.academic_year || !payload.semester) {
         return res.status(403).json({ message: "Invalid access token" });
       }
     } catch (err) {
@@ -30,7 +28,7 @@ export const authenticate = async (req, res, next) => {
         }
 
         try {
-          const refreshTokenPayload = await JWTService.verifyToken(refreshTokenRecord.token, secretKey);
+          const refreshTokenPayload = await JWTService.verifyToken(refreshTokenRecord.token);
 
           const newAccessUser = await prisma.users.findUnique({
             where: { id: refreshTokenPayload.userId },
@@ -43,6 +41,8 @@ export const authenticate = async (req, res, next) => {
           const newAccessToken = await JWTService.generateToken({
             userId: newAccessUser.id,
             role: newAccessUser.role,
+            academic_year: JWTService.decodeToken(token).academic_year,
+            semester: JWTService.decodeToken(token).semester,
           });
 
           req.user = newAccessUser;

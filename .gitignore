@@ -1,4 +1,6 @@
 node_modules
+*.prisma
+prisma
 # Keep environment variables out of version control
 .env
 .idea
@@ -6,4 +8,3 @@ node_modules
 *.log
 package-lock.json
 temp
-prisma

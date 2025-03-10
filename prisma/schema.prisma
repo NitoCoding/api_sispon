@@ -7,150 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model data_adab_asrama {
-  id Int @id
-}
-
-model data_adab_sekolah {
-  id Int @id @default(autoincrement())
-}
-
-model data_ibadah_asrama {
-  id Int @id
-}
-
-model data_kompetensi_inti {
-  id            Int    @id @default(autoincrement())
-  kd_kompetensi String @db.VarChar(5)
-  tahun_ajaran  String @db.VarChar(9)
-  semester      String @db.Char(2)
-  kelas         String @db.Char(2)
-  mapel         String @db.VarChar(5)
-  guru          String @db.VarChar(3)
-  kd1           String @db.Text
-  kd2           String @db.Text
-  kd3           String @db.Text
-  kd4           String @db.Text
-  kd5           String @db.Text
-  kd6           String @db.Text
-  kd7           String @db.Text
-  kd8           String @db.Text
-}
-
-model guru_pegawai {
-  id                Int       @id @default(autoincrement())
-  nip               String    @unique(map: "guru_pegawai_unique") @db.VarChar(35)
-  tahun_terdaftar   Int?
-  nama_gp           String?   @db.VarChar(100)
-  foto_gp           String?   @db.VarChar(100)
-  jk                String?   @db.Char(1)
-  tempat_ttl        String?   @db.VarChar(100)
-  tgl_ttl           DateTime? @db.Date
-  status_pernikahan String?   @db.Char(1)
-  jumlah_anak       String?   @db.Char(2)
-  pendidikan        String?   @db.VarChar(100)
-  jabatan           String?   @db.VarChar(100)
-  ket_jabatan       String?   @db.VarChar(100)
-  status_gp         String?   @db.Char(1)
-  status_kp         String?   @db.Char(1)
-  unit              String?   @db.VarChar(100)
-  alamat            String?   @db.VarChar(100)
-  telepon           String?   @db.VarChar(100)
-}
-
-model jabatan {
-  id Int @id @default(autoincrement())
-}
-
-model ref_jam {
-  id           Int    @id @default(autoincrement())
-  jam          String @db.VarChar(11)
-  jml_jam      Int?
-  jumlah_menit Int?
-}
-
-model ref_kelas {
-  id                     Int                      @id @default(autoincrement())
-  kode                   Int                      @unique(map: "ref_kelas_unique")
-  kelas                  String?                  @db.VarChar(10)
-  kapasitas              Int?
-  jumlah_meja            Int?
-  meja_rusak             Int?
-  jumlah_kursi           Int?
-  kursi_rusak            Int?
-  jumlah_lemari          Int?
-  lemari_rusak           Int?
-  jumlah_ptulis          Int?
-  ptulis_rusak           Int?
-  proyektor              Int?
-  data_konfigurasi_biaya data_konfigurasi_biaya[]
-}
-
-model ref_kelompok_lokasi {
-  id   Int     @id @default(autoincrement())
-  nama String? @db.VarChar(100)
-}
-
-model ref_lokasi {
-  id       Int     @id @default(autoincrement())
-  kelompok Int?
-  nama     String? @db.VarChar(100)
-}
-
-model ref_mapel {
-  id           Int     @id @default(autoincrement())
-  kode         String  @db.VarChar(10)
-  nama         String? @db.VarChar(100)
-  kkm_1        Int?
-  kkm_2        Int?
-  kkm_3        Int?
-  keterangan   String? @db.VarChar(100)
-  id_kurikulum Int?
-
-  @@unique([kode, keterangan], map: "ref_mapel_kode_IDX")
-}
-
-model users {
-  id            Int            @id @default(autoincrement())
-  kode_pegawai  Int?
-  password      String?        @db.VarChar(255)
-  role          String?        @db.VarChar(2)
-  refreshTokens RefreshToken[]
-}
-
-model data_pengajar {
-  id         Int    @id @default(autoincrement())
-  thn_ajaran String @db.VarChar(10)
-  semester   String @db.VarChar(2)
-  kd_guru    String @db.VarChar(5)
-  kd_mapel   String @db.VarChar(5)
-  kd_kelas   String @db.VarChar(5)
-}
-
-model data_kelas {
-  id_semester            Int?
-  id                     Int                      @id @default(autoincrement())
-  id_mapel               Int?
-  nama                   String?                  @db.VarChar(100)
-  created_at             DateTime?                @default(now()) @db.Timestamp(0)
-  status                 data_kelas_status?       @default(aktif)
-  data_absensi           data_absensi[]
-  data_rencana_penilaian data_rencana_penilaian[]
-}
-
-model data_kelas_pengajar {
-  id         Int       @id
-  id_guru    Int?
-  id_kelas   Int?
-  created_at DateTime? @default(now()) @db.Timestamp(0)
-}
-
-model data_wali_kelas {
-  id       Int  @id
-  id_gp    Int?
-  id_kelas Int?
-}
-
 model RefreshToken {
   id        Int      @id @default(autoincrement())
   token     String   @unique
@@ -159,67 +15,6 @@ model RefreshToken {
   users     users    @relation(fields: [userId], references: [id])
 
   @@index([userId], map: "RefreshToken_userId_fkey")
-}
-
-model santri {
-  id           Int                 @id @default(autoincrement())
-  nis_nasional String              @db.VarChar(100)
-  nis          String              @db.VarChar(100)
-  nama         String?             @db.VarChar(100)
-  foto         String?             @db.VarChar(100)
-  jk           santri_jk?
-  tempat_ttl   String?             @db.VarChar(100)
-  tgl_ttl      DateTime?           @db.Date
-  agama        String?             @db.VarChar(50)
-  kesukuan     String?             @db.VarChar(50)
-  anak_ke      Int?
-  tinggi       Decimal?            @db.Decimal(5, 2)
-  berat        Decimal?            @db.Decimal(5, 2)
-  gol_darah    String?             @db.VarChar(3)
-  hobi         String?             @db.Text
-  email        String?             @db.VarChar(100)
-  status       santri_status_enum?
-  id_jenjang   Int?
-  warna_kulit  String?             @db.VarChar(100)
-}
-
-model santri_kesehatan {
-  id               Int     @id @default(autoincrement())
-  id_santri        Int?
-  riwayat_penyakit String? @db.Text
-}
-
-model santri_kontak {
-  id        Int     @id @default(autoincrement())
-  id_santri String? @db.VarChar(100)
-  telepon   String? @db.VarChar(100)
-  alamat    String? @db.Text
-  provinsi  String? @db.VarChar(100)
-  kota      String? @db.VarChar(100)
-  kode_pos  String? @db.VarChar(100)
-}
-
-model santri_pendidikan {
-  id              Int     @id @default(autoincrement())
-  id_santri       Int?
-  asal_sekolah    String? @db.VarChar(100)
-  alamat_sekolah  String? @db.Text
-  nilai_ujian_sd  String? @db.VarChar(100)
-  nilai_ujian_smp String? @db.VarChar(100)
-  no_skhun        String? @db.VarChar(100)
-  tahun_skhun     Int?    @db.Year
-}
-
-model santri_status {
-  id                 Int       @id @default(autoincrement())
-  id_santri          Int?
-  tahun_ajaran_masuk String?   @db.VarChar(9)
-  tahun_ajaran_tamat String?   @db.VarChar(9)
-  tgl_masuk          DateTime? @db.Date
-  tgl_keluar         DateTime? @db.Date
-  pindahan           Boolean?
-  alasan_pindah      String?   @db.Text
-  lanjut_ke          String?   @db.VarChar(100)
 }
 
 model data_absensi {
@@ -246,6 +41,14 @@ model data_absensi_detail {
 
   @@index([id_absensi], map: "id_absensi")
   @@index([id_status], map: "id_status")
+}
+
+model data_adab_asrama {
+  id Int @id
+}
+
+model data_adab_sekolah {
+  id Int @id @default(autoincrement())
 }
 
 model data_beasiswa {
@@ -287,6 +90,10 @@ model data_eskul {
   id_mapel  Int?
 }
 
+model data_ibadah_asrama {
+  id Int @id
+}
+
 model data_kehadiran_pegawai {
   id           Int                            @id @default(autoincrement())
   id_pegawai   Int?
@@ -296,11 +103,47 @@ model data_kehadiran_pegawai {
   status       data_kehadiran_pegawai_status?
 }
 
+model data_kelas {
+  id                     Int                      @id @default(autoincrement())
+  id_semester            Int?
+  id_mapel               Int?
+  nama                   String?                  @db.VarChar(100)
+  created_at             DateTime?                @default(now()) @db.Timestamp(0)
+  status                 data_kelas_status?       @default(aktif)
+  data_absensi           data_absensi[]
+  data_rencana_penilaian data_rencana_penilaian[]
+}
+
 model data_kelas_anggota {
   id         Int       @id @default(autoincrement())
   id_kelas   Int?
   id_santri  String?   @db.VarChar(100)
   created_at DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model data_kelas_pengajar {
+  id         Int       @id
+  id_guru    Int?
+  id_kelas   Int?
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model data_kompetensi_inti {
+  id            Int    @id @default(autoincrement())
+  kd_kompetensi String @db.VarChar(5)
+  tahun_ajaran  String @db.VarChar(9)
+  semester      String @db.Char(2)
+  kelas         String @db.Char(2)
+  mapel         String @db.VarChar(5)
+  guru          String @db.VarChar(3)
+  kd1           String @db.Text
+  kd2           String @db.Text
+  kd3           String @db.Text
+  kd4           String @db.Text
+  kd5           String @db.Text
+  kd6           String @db.Text
+  kd7           String @db.Text
+  kd8           String @db.Text
 }
 
 model data_konfigurasi_biaya {
@@ -320,23 +163,33 @@ model data_konfigurasi_biaya {
   @@index([id_tahun_ajaran], map: "id_tahun_ajaran")
 }
 
-model data_nilai {
-  id                     Int                    @id @default(autoincrement())
-  id_rencana             Int
-  id_santri              Int
-  nilai                  Decimal?               @db.Decimal(5, 2)
-  created_at             DateTime?              @default(now()) @db.Timestamp(0)
-  data_rencana_penilaian data_rencana_penilaian @relation(fields: [id_rencana], references: [id], onUpdate: Restrict, map: "data_nilai_ibfk_1")
-
-  @@index([id_rencana], map: "id_rencana")
-}
-
 model data_nilai_eskul {
   id           Int     @id @default(autoincrement())
   id_santri    Int?
   id_mapel     Int?
   tahun_ajaran String? @db.VarChar(100)
+  semester     String? @db.VarChar(100)
   nilai        Int?
+}
+
+model data_nilai_kelas {
+  id                     Int                    @id @default(autoincrement())
+  id_rencana             Int
+  id_santri              Int
+  nilai                  Decimal?               @db.Decimal(5, 2)
+  created_at             DateTime?              @default(now()) @db.Timestamp(0)
+  data_rencana_penilaian data_rencana_penilaian @relation(fields: [id_rencana], references: [id], onUpdate: Restrict, map: "data_nilai_kelas_ibfk_1")
+
+  @@index([id_rencana], map: "id_rencana")
+}
+
+model data_nilai_kti {
+  id           Int     @id @default(autoincrement())
+  id_santri    Int?
+  tahun_ajaran String? @db.VarChar(100)
+  semester     String? @db.VarChar(100)
+  nilai        Int?
+  judul        String? @db.VarChar(100)
 }
 
 model data_pegawai_gaji {
@@ -348,19 +201,28 @@ model data_pegawai_gaji {
   status      data_pegawai_gaji_status?
 }
 
-model data_pembayaran {
-  id                Int                                @id @default(autoincrement())
-  no_kwitansi       String?                            @unique(map: "no_kwitansi") @db.VarChar(20)
+model data_pembayaran_santri {
+  id                Int                                       @id @default(autoincrement())
+  no_kwitansi       String?                                   @unique(map: "no_kwitansi") @db.VarChar(20)
   id_santri         Int?
   id_tahun_ajaran   Int?
   id_semester       Int?
-  tanggal_bayar     DateTime?                          @db.Date
-  total_bayar       Decimal?                           @db.Decimal(15, 2)
-  metode_pembayaran data_pembayaran_metode_pembayaran?
-  status            data_pembayaran_status?
-  keterangan        String?                            @db.Text
+  tanggal_bayar     DateTime?                                 @db.Date
+  total_bayar       Decimal?                                  @db.Decimal(15, 2)
+  metode_pembayaran data_pembayaran_santri_metode_pembayaran?
+  status            data_pembayaran_santri_status?
+  keterangan        String?                                   @db.Text
   created_by        Int?
-  created_at        DateTime?                          @default(now()) @db.Timestamp(0)
+  created_at        DateTime?                                 @default(now()) @db.Timestamp(0)
+}
+
+model data_pengajar {
+  id         Int    @id @default(autoincrement())
+  thn_ajaran String @db.VarChar(10)
+  semester   String @db.VarChar(2)
+  kd_guru    String @db.VarChar(5)
+  kd_mapel   String @db.VarChar(5)
+  kd_kelas   String @db.VarChar(5)
 }
 
 model data_penggajian {
@@ -378,6 +240,24 @@ model data_penggajian {
   status                  data_penggajian_status?
   created_at              DateTime?                @default(now()) @db.Timestamp(0)
   data_detail_penggajian  data_detail_penggajian[]
+}
+
+model data_penilaian_karakter {
+  id                    Int                              @id @default(autoincrement())
+  tahun_akademik        String                           @db.VarChar(9)
+  semester              Int?
+  bulan                 Int                              @db.TinyInt
+  minggu                Int                              @db.TinyInt
+  id_siswa              String                           @db.VarChar(15)
+  id_kriteria           Int
+  nilai                 data_penilaian_karakter_nilai
+  lokasi                data_penilaian_karakter_lokasi
+  created_at            DateTime?                        @default(now()) @db.Timestamp(0)
+  updated_at            DateTime?                        @default(now()) @db.Timestamp(0)
+  ref_kriteria_karakter ref_kriteria_karakter            @relation(fields: [id_kriteria], references: [id], onUpdate: Restrict, map: "data_penilaian_karakter_ibfk_1")
+
+  @@index([id_kriteria], map: "id_kriteria")
+  @@index([id_siswa, tahun_akademik, semester, bulan, minggu], map: "indeks_siswa_periode")
 }
 
 model data_penyesuaian_gaji {
@@ -419,7 +299,7 @@ model data_rencana_penilaian {
   nilai_maksimum     Decimal?           @default(100.00) @db.Decimal(5, 2)
   keterangan         String?            @db.Text
   created_at         DateTime?          @default(now()) @db.Timestamp(0)
-  data_nilai         data_nilai[]
+  data_nilai_kelas   data_nilai_kelas[]
   data_kelas         data_kelas         @relation(fields: [id_kelas], references: [id], onUpdate: Restrict, map: "data_rencana_penilaian_ibfk_1")
   ref_komponen_nilai ref_komponen_nilai @relation(fields: [id_komponen], references: [id], onUpdate: Restrict, map: "data_rencana_penilaian_ibfk_2")
 
@@ -449,6 +329,20 @@ model data_rombel_anggota {
   @@index([id_rombel], map: "data_rombel_anggota_data_rombel_FK")
 }
 
+model data_transaksi_keuangan {
+  id           Int                             @id @default(autoincrement())
+  tanggal      DateTime?                       @db.Date
+  nominal      Decimal?                        @db.Decimal(15, 2)
+  keterangan   String?                         @db.Text
+  jenis        Int?
+  no_referensi String?                         @db.VarChar(100)
+  status       data_transaksi_keuangan_status?
+  created_at   DateTime?                       @default(now()) @db.Timestamp(0)
+  updated_at   DateTime?                       @db.Timestamp(0)
+  created_by   Int?
+  updated_by   Int?
+}
+
 model data_tunjangan_pegawai {
   id            Int                            @id
   id_pegawai    Int?
@@ -459,11 +353,56 @@ model data_tunjangan_pegawai {
   status        data_tunjangan_pegawai_status?
 }
 
+model data_wali_kelas {
+  id       Int  @id
+  id_gp    Int?
+  id_kelas Int?
+}
+
+model guru_pegawai {
+  id                Int       @id @default(autoincrement())
+  nip               String    @unique(map: "guru_pegawai_unique") @db.VarChar(35)
+  tahun_terdaftar   Int?
+  nama_gp           String?   @db.VarChar(100)
+  foto_gp           String?   @db.VarChar(100)
+  jk                String?   @db.Char(1)
+  tempat_ttl        String?   @db.VarChar(100)
+  tgl_ttl           DateTime? @db.Date
+  status_pernikahan String?   @db.Char(1)
+  jumlah_anak       String?   @db.Char(2)
+  pendidikan        String?   @db.VarChar(100)
+  jabatan           String?   @db.VarChar(100)
+  ket_jabatan       String?   @db.VarChar(100)
+  status_gp         String?   @db.Char(1)
+  status_kp         String?   @db.Char(1)
+  unit              String?   @db.VarChar(100)
+  alamat            String?   @db.VarChar(100)
+  telepon           String?   @db.VarChar(100)
+}
+
+model jabatan {
+  id Int @id @default(autoincrement())
+}
+
+model ref_jam {
+  id           Int    @id @default(autoincrement())
+  jam          String @db.VarChar(11)
+  jml_jam      Int?
+  jumlah_menit Int?
+}
+
 model ref_jenis_gaji {
   id        Int      @id @default(autoincrement())
   kategori  String?  @db.VarChar(100)
   gaji      Decimal? @db.Decimal(15, 2)
   deskripsi String?  @db.VarChar(100)
+}
+
+model ref_jenis_keuangan {
+  id        Int                          @id @default(autoincrement())
+  nama      String?                      @db.VarChar(100)
+  kategori  ref_jenis_keuangan_kategori?
+  deskripsi String?                      @db.Text
 }
 
 model ref_jenis_pembayaran {
@@ -490,6 +429,35 @@ model ref_jenis_tunjangan {
   status_tetap Boolean?
 }
 
+model ref_karakter_kategori {
+  id                    Int                     @id @default(autoincrement())
+  nama                  String                  @db.VarChar(50)
+  deskripsi             String?                 @db.Text
+  ref_kriteria_karakter ref_kriteria_karakter[]
+}
+
+model ref_kelas {
+  id                     Int                      @id @default(autoincrement())
+  kode                   Int                      @unique(map: "ref_kelas_unique")
+  kelas                  String?                  @db.VarChar(10)
+  kapasitas              Int?
+  jumlah_meja            Int?
+  meja_rusak             Int?
+  jumlah_kursi           Int?
+  kursi_rusak            Int?
+  jumlah_lemari          Int?
+  lemari_rusak           Int?
+  jumlah_ptulis          Int?
+  ptulis_rusak           Int?
+  proyektor              Int?
+  data_konfigurasi_biaya data_konfigurasi_biaya[]
+}
+
+model ref_kelompok_lokasi {
+  id   Int     @id @default(autoincrement())
+  nama String? @db.VarChar(100)
+}
+
 model ref_komponen_nilai {
   id                     Int                      @id @default(autoincrement())
   nama                   String                   @db.VarChar(50)
@@ -498,9 +466,40 @@ model ref_komponen_nilai {
   data_rencana_penilaian data_rencana_penilaian[]
 }
 
+model ref_kriteria_karakter {
+  id                      Int                          @id @default(autoincrement())
+  id_kategori             Int
+  nama                    String                       @db.VarChar(50)
+  deskripsi               String?                      @db.Text
+  lokasi                  ref_kriteria_karakter_lokasi
+  data_penilaian_karakter data_penilaian_karakter[]
+  ref_karakter_kategori   ref_karakter_kategori        @relation(fields: [id_kategori], references: [id], onUpdate: Restrict, map: "ref_kriteria_karakter_ibfk_1")
+
+  @@index([id_kategori], map: "id_kategori")
+}
+
 model ref_kurikulum {
   id   Int     @id @default(autoincrement())
   nama String? @db.VarChar(100)
+}
+
+model ref_lokasi {
+  id       Int     @id @default(autoincrement())
+  kelompok Int?
+  nama     String? @db.VarChar(100)
+}
+
+model ref_mapel {
+  id           Int     @id @default(autoincrement())
+  kode         String  @db.VarChar(10)
+  nama         String? @db.VarChar(100)
+  kkm_1        Int?
+  kkm_2        Int?
+  kkm_3        Int?
+  keterangan   String? @db.VarChar(100)
+  id_kurikulum Int?
+
+  @@unique([kode, keterangan], map: "ref_mapel_kode_IDX")
 }
 
 model ref_semester {
@@ -532,16 +531,73 @@ model ref_tahun_ajaran {
   ref_semester           ref_semester[]
 }
 
-enum santri_jk {
-  L
-  P
+model santri {
+  id           Int            @id @default(autoincrement())
+  nisn String         @db.VarChar(100)
+  nis          String         @db.VarChar(100)
+  nama         String?        @db.VarChar(100)
+  foto         String?        @db.VarChar(100)
+  jk           santri_jk?
+  tempat_ttl   String?        @db.VarChar(100)
+  tgl_ttl      DateTime?      @db.Date
+  agama        String?        @db.VarChar(50)
+  kesukuan     String?        @db.VarChar(50)
+  anak_ke      Int?
+  tinggi       Decimal?       @db.Decimal(5, 2)
+  berat        Decimal?       @db.Decimal(5, 2)
+  gol_darah    String?        @db.VarChar(3)
+  hobi         String?        @db.Text
+  email        String?        @db.VarChar(100)
+  status       santri_status_enum?
+  id_jenjang   Int?
+  warna_kulit  String?        @db.VarChar(100)
 }
 
-enum santri_status_enum {
-  Aktif
-  Tidak_Aktif @map("Tidak Aktif")
-  Alumni
-  Pindah
+model santri_kesehatan {
+  id               Int     @id @default(autoincrement())
+  id_santri        Int?
+  riwayat_penyakit String? @db.Text
+}
+
+model santri_kontak {
+  id        Int     @id @default(autoincrement())
+  id_santri String? @db.VarChar(100)
+  telepon   String? @db.VarChar(100)
+  alamat    String? @db.Text
+  provinsi  String? @db.VarChar(100)
+  kota      String? @db.VarChar(100)
+  kode_pos  String? @db.VarChar(100)
+}
+
+model santri_pendidikan {
+  id              Int     @id @default(autoincrement())
+  id_santri       Int?
+  asal_sekolah    String? @db.VarChar(100)
+  alamat_sekolah  String? @db.Text
+  nilai_ujian_sd  String? @db.VarChar(100)
+  nilai_ujian_smp String? @db.VarChar(100)
+  no_skhun        String? @db.VarChar(100)
+  tahun_skhun     Int?    @db.Year
+}
+
+model santri_status {
+  id                 Int       @id @default(autoincrement())
+  id_santri          Int?
+  tahun_ajaran_masuk String?   @db.VarChar(9)
+  tahun_ajaran_tamat String?   @db.VarChar(9)
+  tgl_masuk          DateTime? @db.Date
+  tgl_keluar         DateTime? @db.Date
+  pindahan           Boolean?
+  alasan_pindah      String?   @db.Text
+  lanjut_ke          String?   @db.VarChar(100)
+}
+
+model users {
+  id           Int            @id @default(autoincrement())
+  kode_pegawai Int?
+  password     String?        @db.VarChar(255)
+  role         String?        @db.VarChar(2)
+  RefreshToken RefreshToken[]
 }
 
 enum data_detail_penggajian_jenis_komponen {
@@ -552,9 +608,10 @@ enum data_detail_penggajian_jenis_komponen {
   pinjaman
 }
 
-enum data_rombel_anggota_status {
-  aktif
-  nonaktif
+
+enum ref_jenis_keuangan_kategori {
+  pemasukan
+  pengeluaran
 }
 
 enum ref_jenis_pembayaran_frekuensi {
@@ -562,6 +619,16 @@ enum ref_jenis_pembayaran_frekuensi {
   tahunan
   semester
   bulanan
+}
+
+enum data_rombel_anggota_status {
+  aktif
+  nonaktif
+}
+
+enum ref_kriteria_karakter_lokasi {
+  sekolah
+  asrama
 }
 
 enum ref_semester_status {
@@ -580,6 +647,24 @@ enum ref_tahun_ajaran_status {
   nonaktif
 }
 
+enum santri_jk {
+  L
+  P
+}
+
+enum data_kehadiran_pegawai_status {
+  hadir
+  absen
+  terlambat
+  keluar
+  sakit
+}
+
+enum data_pegawai_gaji_status {
+  aktif
+  tidak_aktif @map("tidak aktif")
+}
+
 enum data_rombel_status {
   aktif
   nonaktif
@@ -595,22 +680,15 @@ enum data_penyesuaian_gaji_status {
   tidak_aktif @map("tidak aktif")
 }
 
-enum data_pegawai_gaji_status {
-  aktif
-  tidak_aktif @map("tidak aktif")
-}
-
-enum data_kehadiran_pegawai_status {
-  hadir
-  absen
-  terlambat
-  keluar
-  sakit
-}
-
 enum data_tunjangan_pegawai_status {
   aktif
   tidak_aktif @map("tidak aktif")
+}
+
+enum data_transaksi_keuangan_status {
+  pending
+  success
+  cancelled
 }
 
 enum data_potongan_pegawai_status {
@@ -618,10 +696,12 @@ enum data_potongan_pegawai_status {
   tidak_aktif @map("tidak aktif")
 }
 
-enum data_pembayaran_metode_pembayaran {
-  tunai
-  transfer
-  virtual_account
+enum data_penilaian_karakter_nilai {
+  A
+  B
+  C
+  D
+  E
 }
 
 enum data_beasiswa_status {
@@ -629,7 +709,18 @@ enum data_beasiswa_status {
   nonaktif
 }
 
-enum data_pembayaran_status {
+enum data_pembayaran_santri_metode_pembayaran {
+  tunai
+  transfer
+  virtual_account
+}
+
+enum data_penilaian_karakter_lokasi {
+  sekolah
+  asrama
+}
+
+enum data_pembayaran_santri_status {
   pending
   success
   cancelled
@@ -639,4 +730,11 @@ enum data_penggajian_status {
   draf
   disetujui
   terbayar
+}
+
+enum santri_status_enum {
+  Aktif
+  Tidak_Aktif @map("Tidak Aktif")
+  Alumni
+  Pindah
 }

@@ -1,3 +1,4 @@
+
 import { prisma } from '../prisma.js';
 
 // Get all data_rombel
@@ -86,3 +87,4 @@ export const deleteRombel = async (req, res, next) => {
         next(error);
     }
 };
+

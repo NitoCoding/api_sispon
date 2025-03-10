@@ -25,11 +25,17 @@ export const logger = winston.createLogger({
 
 // Handle uncaught exceptions and unhandled rejections
 process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception:', error);
+  if(config.env === 'development'){
+    console.error('Uncaught Exception:', error);
+  }
+  logger.error('Uncaught Exception:', { message: error.message, stack: error.stack });
   process.exit(1);
 });
 
 process.on('unhandledRejection', (error) => {
-  logger.error('Unhandled Rejection:', error);
+  if(config.env === 'development'){
+    console.error('Unhandled Rejection:', error);
+  }
+  logger.error('Unhandled Rejection:', { message: error.message, stack: error.stack });
   process.exit(1);
 });

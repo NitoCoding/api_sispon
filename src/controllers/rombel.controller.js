@@ -1,175 +1,90 @@
-import { prisma } from "../prisma.js";
 
-export class RombelController {
-  static createRombel = async (req, res) => {
+import { prisma } from '../prisma.js';
+
+// Get all data_rombel
+export const getAllRombel = async (req, res, next) => {
     try {
-      const { id_kelas, id_tahun_ajaran, id_wali_kelas, nama } = req.body;
-
-      const rombel = await prisma.data_rombel.create({
-        data: {
-          id_kelas,
-          id_tahun_ajaran,
-          id_wali_kelas,
-          nama,
-          status: "aktif",
-        },
-      });
-
-      res.json({
-        success: true,
-        data: rombel,
-      });
+        const rombels = await prisma.data_rombel.findMany();
+        res.status(200).json(rombels);
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message,
-      });
+        next(error);
     }
-  };
+};
 
-  static getRombels = async (req, res) => {
+// Get single data_rombel by ID
+export const getRombelById = async (req, res, next) => {
     try {
-      const rombels = await prisma.data_rombel.findMany({
-        include: {
-          data_rombel_anggota: true,
-        },
-      });
-
-      res.json({
-        success: true,
-        data: rombels,
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message,
-      });
-    }
-  };
-
-  static getRombelById = async (req, res) => {
-    try {
-      const { id } = req.params;
-      const rombel = await prisma.data_rombel.findUnique({
-        where: { id: parseInt(id) },
-        include: {
-          data_rombel_anggota: true,
-        },
-      });
-
-      if (!rombel) {
-        return res.status(404).json({
-          success: false,
-          message: "Rombel not found",
+        const { id } = req.params;
+        const rombel = await prisma.data_rombel.findUnique({
+            where: { id: parseInt(id) }
         });
-      }
-
-      res.json({
-        success: true,
-        data: rombel,
-      });
+        if (!rombel) return res.status(404).json({ message: "Rombel not found" });
+        res.status(200).json(rombel);
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message,
-      });
+        next(error);
     }
-  };
+};
 
-  static updateRombel = async (req, res) => {
+// Create new data_rombel
+export const createRombel = async (req, res, next) => {
     try {
-      const { id } = req.params;
-      const { id_kelas, id_tahun_ajaran, id_wali_kelas, nama, status } =
-        req.body;
-
-      const rombel = await prisma.data_rombel.update({
-        where: { id: parseInt(id) },
-        data: {
-          id_kelas,
-          id_tahun_ajaran,
-          id_wali_kelas,
-          nama,
-          status,
-        },
-      });
-
-      res.json({
-        success: true,
-        data: rombel,
-      });
+        const {
+            id_kelas,
+            id_tahun_ajaran,
+            id_wali_kelas,
+            nama,
+            status } = req.body;
+        const newRombel = await prisma.data_rombel.create({
+            data: {
+                id_kelas,
+                id_tahun_ajaran,
+                id_wali_kelas,
+                nama,
+                status
+            }
+        });
+        res.status(201).json(newRombel);
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message,
-      });
+        next(error);
     }
-  };
+};
 
-  static deleteRombel = async (req, res) => {
+// Update data_rombel by ID
+export const updateRombel = async (req, res, next) => {
     try {
-      const { id } = req.params;
-
-      await prisma.data_rombel_anggota.deleteMany({
-        where: { id_rombel: parseInt(id) },
-      });
-
-      await prisma.data_rombel.delete({
-        where: { id: parseInt(id) },
-      });
-
-      res.json({
-        success: true,
-        message: "Rombel deleted successfully",
-      });
+        const { id } = req.params;
+        const {
+            id_kelas,
+            id_tahun_ajaran,
+            id_wali_kelas,
+            nama,
+            status } = req.body;
+        const updatedRombel = await prisma.data_rombel.update({
+            where: { id: parseInt(id) },
+            data: {
+                id_kelas,
+                id_tahun_ajaran,
+                id_wali_kelas,
+                nama,
+                status
+            }
+        });
+        res.status(200).json(updatedRombel);
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message,
-      });
+        next(error);
     }
-  };
+};
 
-  static addStudentToRombel = async (req, res) => {
+// Delete data_rombel by ID
+export const deleteRombel = async (req, res, next) => {
     try {
-      const { id_rombel, id_santri } = req.body;
-
-      const anggota = await prisma.data_rombel_anggota.create({
-        data: {
-          id_rombel: parseInt(id_rombel),
-          id_santri: parseInt(id_santri),
-          status: "aktif",
-        },
-      });
-
-      res.json({
-        success: true,
-        data: anggota,
-      });
+        const { id } = req.params;
+        await prisma.data_rombel.delete({
+            where: { id: parseInt(id) }
+        });
+        res.status(200).json({ message: "Rombel deleted successfully" });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message,
-      });
+        next(error);
     }
-  };
+};
 
-  static removeStudentFromRombel = async (req, res) => {
-    try {
-      const { id } = req.params;
-
-      await prisma.data_rombel_anggota.delete({
-        where: { id: parseInt(id) },
-      });
-
-      res.json({
-        success: true,
-        message: "Student removed from rombel successfully",
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message,
-      });
-    }
-  };
-}

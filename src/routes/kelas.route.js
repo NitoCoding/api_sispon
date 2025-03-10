@@ -1,24 +1,24 @@
 import express from 'express';
 const router = express.Router();
-import { createKelas, getAllKelas, getKelasById, updateKelas, deleteKelas } from '../controllers/kelas.controller.js';
+import { KelasController } from '../controllers/kelas.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 
 // Apply authentication middleware to all routes
 router.use(authenticate);
 
 // Create a new kelas
-router.post('/', createKelas);
+router.post('/', KelasController.createKelas);
 
 // Get all kelas
-router.get('/', getAllKelas);
+router.get('/', KelasController.getAllKelas);
 
 // Get a single kelas by ID
-router.get('/:id', getKelasById);
+router.get('/:id', KelasController.getKelasById);
 
 // Update a kelas
-router.put('/:id', updateKelas);
+router.put('/:id', KelasController.updateKelas);
 
 // Delete a kelas
-router.delete('/:id', deleteKelas);
+router.delete('/:id', KelasController.deleteKelas);
 
 export default router;

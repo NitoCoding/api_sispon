@@ -39,6 +39,7 @@ import userRoutes from './routes/user.route.js';
 import authRoutes from './routes/auth.route.js';
 import guru_pegawaiRoutes from "./routes/guru_pegawai.route.js";
 import santriRoutes from "./routes/santri.route.js";
+import rombelRoutes from "./routes/rombel.route.js";
 
 // Register API routes
 // app.use('/api');
@@ -47,6 +48,7 @@ app.use('/users', userRoutes);
 app.use('/auth', authRoutes);
 app.use('/guru-pegawais', guru_pegawaiRoutes);
 app.use('/santris', santriRoutes);
+app.use('/rombels', rombelRoutes);
 
 // Error handling
 app.use(errorHandler);

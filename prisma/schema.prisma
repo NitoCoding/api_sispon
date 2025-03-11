@@ -825,11 +825,11 @@ enum pendidikan_enum {
   S2
   S3
   Prof
+}
 
 enum santri_status_enum {
   Aktif
   Tidak_Aktif @map("Tidak Aktif")
   Alumni
   Pindah
-
 }

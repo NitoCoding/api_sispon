@@ -162,25 +162,25 @@ model RefreshToken {
 }
 
 model santri {
-  id           Int                 @id @default(autoincrement())
-  nis_nasional String              @db.VarChar(100)
-  nis          String              @db.VarChar(100)
-  nama         String?             @db.VarChar(100)
-  foto         String?             @db.VarChar(100)
-  jk           santri_jk?
-  tempat_ttl   String?             @db.VarChar(100)
-  tgl_ttl      DateTime?           @db.Date
-  agama        String?             @db.VarChar(50)
-  kesukuan     String?             @db.VarChar(50)
-  anak_ke      Int?
-  tinggi       Decimal?            @db.Decimal(5, 2)
-  berat        Decimal?            @db.Decimal(5, 2)
-  gol_darah    String?             @db.VarChar(3)
-  hobi         String?             @db.Text
-  email        String?             @db.VarChar(100)
-  status       santri_status_enum?
-  id_jenjang   Int?
-  warna_kulit  String?             @db.VarChar(100)
+  id          Int                 @id @default(autoincrement())
+  nisn        String              @db.VarChar(100)
+  nis         String              @db.VarChar(100)
+  nama        String?             @db.VarChar(100)
+  foto        String?             @db.VarChar(100)
+  jk          santri_jk?
+  tempat_ttl  String?             @db.VarChar(100)
+  tgl_ttl     DateTime?           @db.Date
+  agama       String?             @db.VarChar(50)
+  kesukuan    String?             @db.VarChar(50)
+  anak_ke     Int?
+  tinggi      Decimal?            @db.Decimal(5, 2)
+  berat       Decimal?            @db.Decimal(5, 2)
+  gol_darah   String?             @db.VarChar(3)
+  hobi        String?             @db.Text
+  email       String?             @db.VarChar(100)
+  status      santri_status_enum?
+  id_jenjang  Int?
+  warna_kulit String?             @db.VarChar(100)
 }
 
 model santri_kesehatan {
@@ -204,8 +204,8 @@ model santri_pendidikan {
   id_santri       Int?
   asal_sekolah    String? @db.VarChar(100)
   alamat_sekolah  String? @db.Text
-  nilai_ujian_sd  String? @db.VarChar(100)
-  nilai_ujian_smp String? @db.VarChar(100)
+  nomor_ujian_sd  String? @db.VarChar(100)
+  nomor_ujian_smp String? @db.VarChar(100)
   no_skhun        String? @db.VarChar(100)
   tahun_skhun     Int?    @db.Year
 }
@@ -220,6 +220,26 @@ model santri_status {
   pindahan           Boolean?
   alasan_pindah      String?   @db.Text
   lanjut_ke          String?   @db.VarChar(100)
+}
+
+model santri_keluarga {
+  id               Int              @id @default(autoincrement())
+  id_santri        Int?
+  nama_ayah        String?          @db.VarChar(100)
+  nama_ibu         String?          @db.VarChar(100)
+  nama_wali        String?          @db.VarChar(100)
+  pendidikan_ayah  pendidikan_enum?
+  pendidikan_ibu   pendidikan_enum?
+  pekerjaan_ayah   String?          @db.VarChar(100)
+  pekerjaan_ibu    String?          @db.VarChar(100)
+  pekerjaan_wali   String?          @db.VarChar(100)
+  suku_marga       String?          @db.VarChar(100)
+  alamat           String?          @db.Text
+  telepon_ayah     String?          @db.VarChar(100)
+  telepon_ibu      String?          @db.VarChar(100)
+  penghasilan_ayah String?          @db.VarChar(100)
+  penghasilan_ibu  String?          @db.VarChar(100)
+  email_ayah       String?          @db.VarChar(100)
 }
 
 model data_absensi {
@@ -639,4 +659,18 @@ enum data_penggajian_status {
   draf
   disetujui
   terbayar
+}
+
+enum pendidikan_enum {
+  SD
+  SMP
+  SMA
+  D1
+  D2
+  D3
+  D4
+  S1
+  S2
+  S3
+  Prof
 }

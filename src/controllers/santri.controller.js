@@ -3,11 +3,11 @@ import { prisma } from '../prisma.js';
 import mysql from 'mysql2/promise';
 import {JWTService} from "../services/jwt.service.js";
 
-// Create Santri
 export const createSantri = async (req, res, next) => {
     try {
         const {
-            nis_nasional,
+            // Data santri
+            nisn,
             nis,
             nama,
             foto,
@@ -25,12 +25,51 @@ export const createSantri = async (req, res, next) => {
             status,
             id_jenjang,
             warna_kulit,
+            // Data kesehatan
+            riwayat_penyakit,
+            // Data kontak
+            telepon,
+            alamat,
+            provinsi,
+            kota,
+            kode_pos,
+            // Data pendidikan
+            asal_sekolah,
+            alamat_sekolah,
+            nomor_ujian_sd,
+            nomor_ujian_smp,
+            no_skhun,
+            tahun_skhun,
+            // Data status
+            tahun_ajaran_masuk,
+            tahun_ajaran_tamat,
+            tgl_masuk,
+            tgl_keluar,
+            pindahan,
+            alasan_pindah,
+            lanjut_ke,
+            // Data keluarga
+            nama_ayah,
+            nama_ibu,
+            nama_wali,
+            pendidikan_ayah,
+            pendidikan_ibu,
+            pekerjaan_ayah,
+            pekerjaan_ibu,
+            pekerjaan_wali,
+            suku_marga,
+            alamat_keluarga,
+            telepon_ayah,
+            telepon_ibu,
+            penghasilan_ayah,
+            penghasilan_ibu,
+            email_ayah,
         } = req.body;
 
-        // Buat santri baru
+        // Buat data santri
         const newSantri = await prisma.santri.create({
             data: {
-                nis_nasional,
+                nisn,
                 nis,
                 nama,
                 foto,
@@ -51,6 +90,75 @@ export const createSantri = async (req, res, next) => {
             },
         });
 
+        // Buat data kesehatan
+        await prisma.santri_kesehatan.create({
+            data: {
+                id_santri: newSantri.id,
+                riwayat_penyakit,
+            },
+        });
+
+        // Buat data kontak
+        await prisma.santri_kontak.create({
+            data: {
+                id_santri: newSantri.id.toString(),
+                telepon,
+                alamat,
+                provinsi,
+                kota,
+                kode_pos,
+            },
+        });
+
+        // Buat data pendidikan
+        await prisma.santri_pendidikan.create({
+            data: {
+                id_santri: newSantri.id,
+                asal_sekolah,
+                alamat_sekolah,
+                nomor_ujian_sd,
+                nomor_ujian_smp,
+                no_skhun,
+                tahun_skhun,
+            },
+        });
+
+        // Buat data status
+        await prisma.santri_status.create({
+            data: {
+                id_santri: newSantri.id,
+                tahun_ajaran_masuk,
+                tahun_ajaran_tamat,
+                tgl_masuk: tgl_masuk ? new Date(tgl_masuk) : null,
+                tgl_keluar: tgl_keluar ? new Date(tgl_keluar) : null,
+                pindahan,
+                alasan_pindah,
+                lanjut_ke,
+            },
+        });
+
+        // Buat data keluarga
+        await prisma.santri_keluarga.create({
+            data: {
+                id_santri: newSantri.id,
+                nama_ayah,
+                nama_ibu,
+                nama_wali,
+                pendidikan_ayah,
+                pendidikan_ibu,
+                pekerjaan_ayah,
+                pekerjaan_ibu,
+                pekerjaan_wali,
+                suku_marga,
+                alamat: alamat_keluarga,
+                telepon_ayah,
+                telepon_ibu,
+                penghasilan_ayah,
+                penghasilan_ibu,
+                email_ayah,
+            },
+        });
+
         res.status(201).json({ message: 'Santri created successfully', santri: newSantri });
     } catch (error) {
         next(error);
@@ -59,7 +167,7 @@ export const createSantri = async (req, res, next) => {
 
 export const getAllSantri = async (req, res, next) => {
     try {
-        const { groupbyclass, class: className } = req.query;
+        const { groupbyclass, class: className, simplify } = req.query;
         const token = req.headers.authorization?.split(" ")[1];
 
         if (!token) {
@@ -68,73 +176,309 @@ export const getAllSantri = async (req, res, next) => {
 
         const decoded = JWTService.decodeToken(token);
         const academicYear = decoded.academic_year;
-
         if (!academicYear) {
             return res.status(400).json({ message: "Invalid token: Missing academic year" });
         }
 
-        // Get the active academic year ID
+        // Ambil tahun ajaran aktif
         const tahunAjaran = await prisma.ref_tahun_ajaran.findFirst({
             where: { id: academicYear },
         });
-
         if (!tahunAjaran) {
             return res.status(404).json({ message: "Academic year not found" });
         }
 
-        const whereClause = {
-            id_tahun_ajaran: tahunAjaran.id,
-        };
-
+        const whereClause = { id_tahun_ajaran: tahunAjaran.id };
         if (className) {
             whereClause["nama"] = className;
         }
 
+        // Ambil data rombel beserta anggota-anggotanya
         const rombels = await prisma.data_rombel.findMany({
             where: whereClause,
             include: {
-                data_rombel_anggota: true
-            }
+                data_rombel_anggota: true,
+            },
         });
 
         let santriData = [];
 
         for (const rombel of rombels) {
-            const anggotaIds = rombel.data_rombel_anggota.map(anggota => anggota.id_santri);
-            const santriList = await prisma.santri.findMany({
-                where: { id: { in: anggotaIds } }
-            });
+            // Dapatkan list id_santri dari tiap anggota rombel
+            const anggotaIds = rombel.data_rombel_anggota.map(
+                (anggota) => anggota.id_santri
+            );
 
-            const santriWithTahunAjaran = await Promise.all(santriList.map(async (santri) => {
-                const status = await prisma.santri_status.findFirst({
-                    where: { id_santri: santri.id },
-                    select: { tahun_ajaran_masuk: true }
+            if (simplify === "true") {
+                // --- Branch: Simplify ---
+                const santriList = await prisma.santri.findMany({
+                    where: { id: { in: anggotaIds } },
+                    select: {
+                        id: true, // untuk penggabungan data status
+                        nis: true,
+                        nama: true,
+                    },
                 });
-                return { ...santri, tahun_ajaran_masuk: status?.tahun_ajaran_masuk || null };
-            }));
 
-            santriData.push({
-                class: rombel.nama,
-                students: santriWithTahunAjaran
-            });
+                const statusList = await prisma.santri_status.findMany({
+                    where: { id_santri: { in: anggotaIds } },
+                    select: {
+                        id_santri: true,
+                        tahun_ajaran_masuk: true,
+                        pindahan: true,
+                    },
+                });
+
+                const statusMap = statusList.reduce((acc, status) => {
+                    acc[status.id_santri] = status;
+                    return acc;
+                }, {});
+
+                const simplifiedStudents = santriList.map((santri) => {
+                    const stat = statusMap[santri.id] || {};
+                    return {
+                        nis: santri.nis,
+                        nama: santri.nama,
+                        kelas: rombel.nama,
+                        tahun_ajaran_masuk: stat.tahun_ajaran_masuk || null,
+                        status: stat.pindahan ? "Pindahan" : "Baru",
+                    };
+                });
+
+                santriData.push({
+                    class: rombel.nama,
+                    students: simplifiedStudents,
+                });
+            } else {
+                // --- Branch: Non-Simplify (detail) ---
+                const santriList = await prisma.santri.findMany({
+                    where: { id: { in: anggotaIds } },
+                });
+                const santriWithDetails = await Promise.all(
+                    santriList.map(async (santri) => {
+                        const kesehatan = await prisma.santri_kesehatan.findFirst({
+                            where: { id_santri: santri.id },
+                        });
+                        const kontak = await prisma.santri_kontak.findFirst({
+                            where: { id_santri: santri.id.toString() },
+                        });
+                        const pendidikan = await prisma.santri_pendidikan.findFirst({
+                            where: { id_santri: santri.id },
+                        });
+                        const status = await prisma.santri_status.findFirst({
+                            where: { id_santri: santri.id },
+                        });
+                        const keluarga = await prisma.santri_keluarga.findFirst({
+                            where: { id_santri: santri.id },
+                        });
+                        return {
+                            ...santri,
+                            riwayat_penyakit: kesehatan?.riwayat_penyakit || null,
+                            telepon: kontak?.telepon || null,
+                            alamat: kontak?.alamat || null,
+                            provinsi: kontak?.provinsi || null,
+                            kota: kontak?.kota || null,
+                            kode_pos: kontak?.kode_pos || null,
+                            asal_sekolah: pendidikan?.asal_sekolah || null,
+                            alamat_sekolah: pendidikan?.alamat_sekolah || null,
+                            nomor_ujian_sd: pendidikan?.nomor_ujian_sd || null,
+                            nomor_ujian_smp: pendidikan?.nomor_ujian_smp || null,
+                            no_skhun: pendidikan?.no_skhun || null,
+                            tahun_skhun: pendidikan?.tahun_skhun || null,
+                            tahun_ajaran_masuk: status?.tahun_ajaran_masuk || null,
+                            tahun_ajaran_tamat: status?.tahun_ajaran_tamat || null,
+                            tgl_masuk: status?.tgl_masuk || null,
+                            tgl_keluar: status?.tgl_keluar || null,
+                            pindahan: status?.pindahan || null,
+                            alasan_pindah: status?.alasan_pindah || null,
+                            lanjut_ke: status?.lanjut_ke || null,
+                            nama_ayah: keluarga?.nama_ayah || null,
+                            nama_ibu: keluarga?.nama_ibu || null,
+                            nama_wali: keluarga?.nama_wali || null,
+                            pendidikan_ayah: keluarga?.pendidikan_ayah || null,
+                            pendidikan_ibu: keluarga?.pendidikan_ibu || null,
+                            pekerjaan_ayah: keluarga?.pekerjaan_ayah || null,
+                            pekerjaan_ibu: keluarga?.pekerjaan_ibu || null,
+                            pekerjaan_wali: keluarga?.pekerjaan_wali || null,
+                            suku_marga: keluarga?.suku_marga || null,
+                            alamat_keluarga: keluarga?.alamat || null,
+                            telepon_ayah: keluarga?.telepon_ayah || null,
+                            telepon_ibu: keluarga?.telepon_ibu || null,
+                            penghasilan_ayah: keluarga?.penghasilan_ayah || null,
+                            penghasilan_ibu: keluarga?.penghasilan_ibu || null,
+                            email_ayah: keluarga?.email_ayah || null,
+                            // Tambahkan informasi kelas dari rombel
+                            kelas: rombel.nama,
+                        };
+                    })
+                );
+                santriWithDetails.sort((a, b) => a.nama.localeCompare(b.nama));
+
+                santriData.push({
+                    class: rombel.nama,
+                    students: santriWithDetails,
+                });
+            }
         }
 
-        if (groupbyclass === "true") {
-            return res.status(200).json(santriData);
+        let allAnggotaIds = new Set()
+        // Kumpulkan seluruh id santri yang terdaftar dalam rombel
+        const allAnggotas = await prisma.data_rombel_anggota.findMany({
+            select: {
+                id_santri:true
+            }
+        });
+        allAnggotas.forEach((element) => {
+            allAnggotaIds.add(element.id_santri);
+        })
+        // rombels.forEach((rombel) => {
+        //     rombel.data_rombel_anggota.forEach((anggota) => {
+        //         allAnggotaIds.add(anggota.id_santri);
+        //     });
+        // });
+        const anggotaIdsArray = Array.from(allAnggotaIds);
+        console.log(anggotaIdsArray);
+
+        // Ambil data santri yang tidak punya kelas (tidak ada di tabel anggota rombel)
+        let noClassSantri = [];
+        if (simplify === "true") {
+            noClassSantri = await prisma.santri.findMany({
+                where: anggotaIdsArray.length > 0
+                    ? { id: { notIn: anggotaIdsArray } }
+                    : {},
+                select: { id: true, nis: true, nama: true }
+            });
+            const statusListNoClass = await prisma.santri_status.findMany({
+                where: anggotaIdsArray.length > 0
+                    ? { id_santri: { notIn: anggotaIdsArray } }
+                    : {},
+                select: { id_santri: true, tahun_ajaran_masuk: true, pindahan: true }
+            });
+            const statusNoClassMap = statusListNoClass.reduce((acc, stat) => {
+                acc[stat.id_santri] = stat;
+                return acc;
+            }, {});
+            noClassSantri = noClassSantri.map((santri) => {
+                const stat = statusNoClassMap[santri.id] || {};
+                return {
+                    nis: santri.nis,
+                    nama: santri.nama,
+                    // Set property kelas sebagai "no_class"
+                    kelas: "no_class",
+                    tahun_ajaran_masuk: stat.tahun_ajaran_masuk || null,
+                    status: stat.pindahan ? "Pindahan" : "Baru",
+                };
+            });
+            noClassSantri.sort((a, b) => a.nama.localeCompare(b.nama));
         } else {
-            return res.status(200).json(santriData.flatMap(item => item.students));
+            noClassSantri = await prisma.santri.findMany({
+                where: anggotaIdsArray.length > 0
+                    ? { id: { notIn: anggotaIdsArray } }
+                    : {}
+            });
+            noClassSantri = await Promise.all(
+                noClassSantri.map(async (santri) => {
+                    const kesehatan = await prisma.santri_kesehatan.findFirst({
+                        where: { id_santri: santri.id },
+                    });
+                    const kontak = await prisma.santri_kontak.findFirst({
+                        where: { id_santri: santri.id.toString() },
+                    });
+                    const pendidikan = await prisma.santri_pendidikan.findFirst({
+                        where: { id_santri: santri.id },
+                    });
+                    const status = await prisma.santri_status.findFirst({
+                        where: { id_santri: santri.id },
+                    });
+                    const keluarga = await prisma.santri_keluarga.findFirst({
+                        where: { id_santri: santri.id },
+                    });
+                    return {
+                        ...santri,
+                        riwayat_penyakit: kesehatan?.riwayat_penyakit || null,
+                        telepon: kontak?.telepon || null,
+                        alamat: kontak?.alamat || null,
+                        provinsi: kontak?.provinsi || null,
+                        kota: kontak?.kota || null,
+                        kode_pos: kontak?.kode_pos || null,
+                        asal_sekolah: pendidikan?.asal_sekolah || null,
+                        alamat_sekolah: pendidikan?.alamat_sekolah || null,
+                        nomor_ujian_sd: pendidikan?.nomor_ujian_sd || null,
+                        nomor_ujian_smp: pendidikan?.nomor_ujian_smp || null,
+                        no_skhun: pendidikan?.no_skhun || null,
+                        tahun_skhun: pendidikan?.tahun_skhun || null,
+                        tahun_ajaran_masuk: status?.tahun_ajaran_masuk || null,
+                        tahun_ajaran_tamat: status?.tahun_ajaran_tamat || null,
+                        tgl_masuk: status?.tgl_masuk || null,
+                        tgl_keluar: status?.tgl_keluar || null,
+                        pindahan: status?.pindahan || null,
+                        alasan_pindah: status?.alasan_pindah || null,
+                        lanjut_ke: status?.lanjut_ke || null,
+                        nama_ayah: keluarga?.nama_ayah || null,
+                        nama_ibu: keluarga?.nama_ibu || null,
+                        nama_wali: keluarga?.nama_wali || null,
+                        pendidikan_ayah: keluarga?.pendidikan_ayah || null,
+                        pendidikan_ibu: keluarga?.pendidikan_ibu || null,
+                        pekerjaan_ayah: keluarga?.pekerjaan_ayah || null,
+                        pekerjaan_ibu: keluarga?.pekerjaan_ibu || null,
+                        pekerjaan_wali: keluarga?.pekerjaan_wali || null,
+                        suku_marga: keluarga?.suku_marga || null,
+                        alamat_keluarga: keluarga?.alamat || null,
+                        telepon_ayah: keluarga?.telepon_ayah || null,
+                        telepon_ibu: keluarga?.telepon_ibu || null,
+                        penghasilan_ayah: keluarga?.penghasilan_ayah || null,
+                        penghasilan_ibu: keluarga?.penghasilan_ibu || null,
+                        email_ayah: keluarga?.email_ayah || null,
+                        // Set property kelas
+                        kelas: "no_class",
+                    };
+                })
+            );
+            noClassSantri.sort((a, b) => a.nama.localeCompare(b.nama));
+        }
+
+        // Masukkan data santri yang tidak punya kelas sebagai salah satu kelas
+        santriData.push({
+            class: "no_class",
+            students: noClassSantri,
+        });
+
+        // Penyusunan response akhir (baik grouped maupun flatten)
+        if (simplify === "true") {
+            if (groupbyclass === "true") {
+                // Urutkan setiap kelas berdasarkan nama siswa
+                const sortedData = santriData.map((rombel) => {
+                    rombel.students.sort((a, b) => a.nama.localeCompare(b.nama));
+                    return rombel;
+                });
+                return res.status(200).json(sortedData);
+            } else {
+                // Mode flatten: gabungkan semua siswa (dari kelas dan no_class)
+                const flatList = santriData
+                    .flatMap((item) => item.students)
+                    .sort((a, b) => a.nama.localeCompare(b.nama));
+                return res.status(200).json(flatList);
+            }
+        } else {
+            if (groupbyclass === "true") {
+                return res.status(200).json(santriData);
+            } else {
+                const flatList = santriData
+                    .flatMap((item) => item.students)
+                    .sort((a, b) => a.nama.localeCompare(b.nama));
+                return res.status(200).json(flatList);
+            }
         }
     } catch (error) {
         next(error);
     }
 };
 
-
-// Get Santri by ID
 export const getSantriById = async (req, res, next) => {
     try {
         const { id } = req.params;
 
+        // Ambil data santri
         const santri = await prisma.santri.findUnique({
             where: { id: parseInt(id) },
         });
@@ -143,17 +487,79 @@ export const getSantriById = async (req, res, next) => {
             return res.status(404).json({ message: 'Santri not found' });
         }
 
-        res.status(200).json(santri);
+        // Ambil data dari tabel terkait
+        const kesehatan = await prisma.santri_kesehatan.findFirst({
+            where: { id_santri: santri.id },
+        });
+        const kontak = await prisma.santri_kontak.findFirst({
+            where: { id_santri: santri.id.toString() },
+        });
+        const pendidikan = await prisma.santri_pendidikan.findFirst({
+            where: { id_santri: santri.id },
+        });
+        const status = await prisma.santri_status.findFirst({
+            where: { id_santri: santri.id },
+        });
+        const keluarga = await prisma.santri_keluarga.findFirst({
+            where: { id_santri: santri.id },
+        });
+
+        // Gabungkan semua data ke dalam satu objek
+        const santriData = {
+            // Data santri
+            ...santri,
+            // Data kesehatan
+            riwayat_penyakit: kesehatan?.riwayat_penyakit || null,
+            // Data kontak
+            telepon: kontak?.telepon || null,
+            alamat: kontak?.alamat || null,
+            provinsi: kontak?.provinsi || null,
+            kota: kontak?.kota || null,
+            kode_pos: kontak?.kode_pos || null,
+            // Data pendidikan
+            asal_sekolah: pendidikan?.asal_sekolah || null,
+            alamat_sekolah: pendidikan?.alamat_sekolah || null,
+            nomor_ujian_sd: pendidikan?.nomor_ujian_sd || null,
+            nomor_ujian_smp: pendidikan?.nomor_ujian_smp || null,
+            no_skhun: pendidikan?.no_skhun || null,
+            tahun_skhun: pendidikan?.tahun_skhun || null,
+            // Data status
+            tahun_ajaran_masuk: status?.tahun_ajaran_masuk || null,
+            tahun_ajaran_tamat: status?.tahun_ajaran_tamat || null,
+            tgl_masuk: status?.tgl_masuk || null,
+            tgl_keluar: status?.tgl_keluar || null,
+            pindahan: status?.pindahan || null,
+            alasan_pindah: status?.alasan_pindah || null,
+            lanjut_ke: status?.lanjut_ke || null,
+            // Data keluarga
+            nama_ayah: keluarga?.nama_ayah || null,
+            nama_ibu: keluarga?.nama_ibu || null,
+            nama_wali: keluarga?.nama_wali || null,
+            pendidikan_ayah: keluarga?.pendidikan_ayah || null,
+            pendidikan_ibu: keluarga?.pendidikan_ibu || null,
+            pekerjaan_ayah: keluarga?.pekerjaan_ayah || null,
+            pekerjaan_ibu: keluarga?.pekerjaan_ibu || null,
+            pekerjaan_wali: keluarga?.pekerjaan_wali || null,
+            suku_marga: keluarga?.suku_marga || null,
+            alamat_keluarga: keluarga?.alamat || null,
+            telepon_ayah: keluarga?.telepon_ayah || null,
+            telepon_ibu: keluarga?.telepon_ibu || null,
+            penghasilan_ayah: keluarga?.penghasilan_ayah || null,
+            penghasilan_ibu: keluarga?.penghasilan_ibu || null,
+            email_ayah: keluarga?.email_ayah || null,
+        };
+
+        res.status(200).json(santriData);
     } catch (error) {
         next(error);
     }
 };
 
-// Update Santri
 export const updateSantri = async (req, res, next) => {
     try {
         const { id } = req.params;
         const {
+            // Data santri
             nis_nasional,
             nis,
             nama,
@@ -172,18 +578,48 @@ export const updateSantri = async (req, res, next) => {
             status,
             id_jenjang,
             warna_kulit,
+            // Data kesehatan
+            riwayat_penyakit,
+            // Data kontak
+            telepon,
+            alamat,
+            provinsi,
+            kota,
+            kode_pos,
+            // Data pendidikan
+            asal_sekolah,
+            alamat_sekolah,
+            nomor_ujian_sd,
+            nomor_ujian_smp,
+            no_skhun,
+            tahun_skhun,
+            // Data status
+            tahun_ajaran_masuk,
+            tahun_ajaran_tamat,
+            tgl_masuk,
+            tgl_keluar,
+            pindahan,
+            alasan_pindah,
+            lanjut_ke,
+            // Data keluarga
+            nama_ayah,
+            nama_ibu,
+            nama_wali,
+            pendidikan_ayah,
+            pendidikan_ibu,
+            pekerjaan_ayah,
+            pekerjaan_ibu,
+            pekerjaan_wali,
+            suku_marga,
+            alamat_keluarga,
+            telepon_ayah,
+            telepon_ibu,
+            penghasilan_ayah,
+            penghasilan_ibu,
+            email_ayah,
         } = req.body;
 
-        // Cek apakah santri ada
-        const existingSantri = await prisma.santri.findUnique({
-            where: { id: parseInt(id) },
-        });
-
-        if (!existingSantri) {
-            return res.status(404).json({ message: 'Santri not found' });
-        }
-
-        // Update santri
+        // Update data santri
         const updatedSantri = await prisma.santri.update({
             where: { id: parseInt(id) },
             data: {
@@ -208,27 +644,88 @@ export const updateSantri = async (req, res, next) => {
             },
         });
 
+        // Update data kesehatan
+        await prisma.santri_kesehatan.updateMany({
+            where: { id_santri: parseInt(id) },
+            data: { riwayat_penyakit },
+        });
+
+        // Update data kontak
+        await prisma.santri_kontak.updateMany({
+            where: { id_santri: id.toString() },
+            data: { telepon, alamat, provinsi, kota, kode_pos },
+        });
+
+        // Update data pendidikan
+        await prisma.santri_pendidikan.updateMany({
+            where: { id_santri: parseInt(id) },
+            data: { asal_sekolah, alamat_sekolah, nomor_ujian_sd, nomor_ujian_smp, no_skhun, tahun_skhun },
+        });
+
+        // Update data status
+        await prisma.santri_status.updateMany({
+            where: { id_santri: parseInt(id) },
+            data: {
+                tahun_ajaran_masuk,
+                tahun_ajaran_tamat,
+                tgl_masuk: tgl_masuk ? new Date(tgl_masuk) : null,
+                tgl_keluar: tgl_keluar ? new Date(tgl_keluar) : null,
+                pindahan,
+                alasan_pindah,
+                lanjut_ke,
+            },
+        });
+
+        // Update data keluarga
+        await prisma.santri_keluarga.updateMany({
+            where: { id_santri: parseInt(id) },
+            data: {
+                nama_ayah,
+                nama_ibu,
+                nama_wali,
+                pendidikan_ayah,
+                pendidikan_ibu,
+                pekerjaan_ayah,
+                pekerjaan_ibu,
+                pekerjaan_wali,
+                suku_marga,
+                alamat: alamat_keluarga,
+                telepon_ayah,
+                telepon_ibu,
+                penghasilan_ayah,
+                penghasilan_ibu,
+                email_ayah,
+            },
+        });
+
         res.status(200).json({ message: 'Santri updated successfully', santri: updatedSantri });
     } catch (error) {
         next(error);
     }
 };
 
-// Delete Santri
 export const deleteSantri = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        // Cek apakah santri ada
-        const existingSantri = await prisma.santri.findUnique({
-            where: { id: parseInt(id) },
+        // Hapus data dari semua tabel terkait
+        await prisma.santri_kesehatan.deleteMany({
+            where: { id_santri: parseInt(id) },
+        });
+        await prisma.santri_kontak.deleteMany({
+            where: { id_santri: id.toString() },
+        });
+        await prisma.santri_pendidikan.deleteMany({
+            where: { id_santri: parseInt(id) },
+        });
+        await prisma.santri_status.deleteMany({
+            where: { id_santri: parseInt(id) },
+        });
+        await prisma.santri_keluarga.deleteMany({
+            where: { id_santri: parseInt(id) },
         });
 
-        if (!existingSantri) {
-            return res.status(404).json({ message: 'Santri not found' });
-        }
-
-        // Hapus santri
+        // Hapus data santri
         await prisma.santri.delete({
             where: { id: parseInt(id) },
         });
@@ -290,7 +787,7 @@ export const migrateSantri = async (req, res, next) => {
             // }
             const {
                 id_santri,
-                nis_nasional,
+                nisn,
                 nis,
                 nama,
                 foto_st,
@@ -344,7 +841,7 @@ export const migrateSantri = async (req, res, next) => {
                 existingSantri = await prisma.santri.create({
                     data: {
                         id: id_santri, // Jika id_santri ingin dipertahankan
-                        nis_nasional,
+                        nisn,
                         nis,
                         nama,
                         foto: foto_st,

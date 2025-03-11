@@ -1,0 +1,47 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main # Ganti dengan branch yang Anda gunakan
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    # Checkout kode dari repository
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # Instal dependencies dan build aplikasi (sesuaikan dengan stack Anda)
+    - name: Set up runtime
+      run: |
+        # Contoh untuk Node.js
+        npm install
+        npm run build  # Ganti dengan perintah build Anda
+        # Jika pakai Go: go build -o myapp
+        # Jika pakai Python: pip install pyinstaller && pyinstaller --onefile app.py
+
+    # Deploy ke VPS via SSH
+    - name: Deploy to VPS
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        VPS_HOST: ${{ secrets.VPS_HOST }}
+        VPS_USER: ${{ secrets.VPS_USER }}
+        VPS_DEST: ${{ secrets.VPS_DEST }}
+      run: |
+        # Instal SSH key
+        echo "$SSH_PRIVATE_KEY" > private_key
+        chmod 600 private_key
+
+        # Copy binary ke VPS
+        scp -i private_key ./myapp $VPS_USER@$VPS_HOST:$VPS_DEST  # Ganti ./myapp dengan nama binary Anda
+
+        # Restart service di VPS
+        ssh -i private_key $VPS_USER@$VPS_HOST "
+          sudo systemctl restart myapp.service
+          sudo systemctl status myapp.service
+        "
+
+        # Hapus private key setelah selesai
+        rm -f private_key

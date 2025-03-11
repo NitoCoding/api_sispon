@@ -5,7 +5,7 @@ dotenv.config();
 
 export const config = {
   env: process.env.NODE_ENV || 'development',
-  port: process.env.PORT,
+  port: process.env.PORT || 3000,
   dbUri: process.env.DATABASE_URL,
   dbUser: process.env.DATABASE_USER,
   dbPassword: process.env.DATABASE_PASSWORD,
@@ -21,3 +21,4 @@ export const config = {
     level: process.env.LOG_LEVEL || 'info'
   }
 };
+

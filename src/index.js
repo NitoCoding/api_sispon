@@ -47,14 +47,15 @@ import guru_pegawaiRoutes from "./routes/guru_pegawai.route.js";
 import santriRoutes from "./routes/santri.route.js";
 import rombelRoutes from "./routes/rombel.route.js";
 import { authenticate } from "./middleware/auth.middleware.js";
+import tahunAjaranRoutes from './routes/tahun_ajaran.route.js'
 import * as path from "node:path";
 
+app.use('/auth', authRoutes);
+app.use('/tahun-ajarans', tahunAjaranRoutes)
+app.use('/guru-pegawais', guru_pegawaiRoutes);
 app.use(authenticate);
 app.use('/users', userRoutes);
-app.use('/auth', authRoutes);
-app.use('/guru-pegawais', guru_pegawaiRoutes);
 app.use('/santris', santriRoutes);
-
 app.use('/rombels', rombelRoutes);
 
 

@@ -2,7 +2,6 @@ import express from 'express';
 
 const router = express.Router();
 
-import { authenticate } from '../middleware/auth.middleware.js';
 import {
     createSantri, deleteSantri,
     getAllSantri,
@@ -10,13 +9,14 @@ import {
     migrateSantri,
     updateSantri
 } from "../controllers/santri.controller.js";
+import {upload} from "../middleware/upload.middleware.js";
 
 router.get('/sync', migrateSantri);
 
-router.post('/', authenticate, createSantri);
-router.get('/', authenticate, getAllSantri);
-router.get('/:id', authenticate, getSantriById);
-router.put('/:id', authenticate, updateSantri);
-router.delete('/:id', authenticate, deleteSantri);
+router.post('/', upload.single("foto"), createSantri);
+router.get('/', getAllSantri);
+router.get('/:id', getSantriById);
+router.put('/:id', upload.single("foto"), updateSantri);
+router.delete('/:id', deleteSantri);
 
 export default router;

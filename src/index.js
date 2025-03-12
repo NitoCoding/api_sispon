@@ -41,7 +41,7 @@ import guru_pegawaiRoutes from "./routes/guru_pegawai.route.js";
 import santriRoutes from "./routes/santri.route.js";
 
 import rombelRoutes from "./routes/rombel.route.js";
-
+import tahunAjaranRoutes from './routes/tahun_ajaran.route.js'
 
 // Register API routes
 // app.use('/api');
@@ -50,6 +50,7 @@ app.use('/users', userRoutes);
 app.use('/auth', authRoutes);
 app.use('/guru-pegawais', guru_pegawaiRoutes);
 app.use('/santris', santriRoutes);
+app.use('/tahun-ajarans', tahunAjaranRoutes)
 
 app.use('/rombels', rombelRoutes);
 

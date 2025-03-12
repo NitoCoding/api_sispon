@@ -1,9 +1,9 @@
-import { express } from "express";
+import express from "express";
 
 const router = express.Router();
 
-import { TaController } from "../controllers/tahun_ajaran.controller";
-import { authenticate } from "../middleware/auth.middleware";
+import { TaController } from "../controllers/tahun_ajaran.controller.js";
+import { authenticate } from "../middleware/auth.middleware.js";
 
 // Apply authentication middleware to all routes
 router.use(authenticate);

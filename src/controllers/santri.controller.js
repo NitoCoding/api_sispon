@@ -2,15 +2,17 @@ import { AppError } from '../middleware/errorHandler.js';
 import { prisma } from '../prisma.js';
 import mysql from 'mysql2/promise';
 import {JWTService} from "../services/jwt.service.js";
+import { promises as fs } from 'fs';
+import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 export const createSantri = async (req, res, next) => {
     try {
         const {
-            // Data santri
             nisn,
             nis,
             nama,
-            foto,
             jk,
             tempat_ttl,
             tgl_ttl,
@@ -25,22 +27,18 @@ export const createSantri = async (req, res, next) => {
             status,
             id_jenjang,
             warna_kulit,
-            // Data kesehatan
             riwayat_penyakit,
-            // Data kontak
             telepon,
             alamat,
             provinsi,
             kota,
             kode_pos,
-            // Data pendidikan
             asal_sekolah,
             alamat_sekolah,
             nomor_ujian_sd,
             nomor_ujian_smp,
             no_skhun,
             tahun_skhun,
-            // Data status
             tahun_ajaran_masuk,
             tahun_ajaran_tamat,
             tgl_masuk,
@@ -48,7 +46,6 @@ export const createSantri = async (req, res, next) => {
             pindahan,
             alasan_pindah,
             lanjut_ke,
-            // Data keluarga
             nama_ayah,
             nama_ibu,
             nama_wali,
@@ -64,104 +61,108 @@ export const createSantri = async (req, res, next) => {
             penghasilan_ayah,
             penghasilan_ibu,
             email_ayah,
-        } = req.body;
+        } = JSON.parse(req.body.data);
 
-        // Buat data santri
-        const newSantri = await prisma.santri.create({
-            data: {
-                nisn,
-                nis,
-                nama,
-                foto,
-                jk,
-                tempat_ttl,
-                tgl_ttl: tgl_ttl ? new Date(tgl_ttl) : null,
-                agama,
-                kesukuan,
-                anak_ke,
-                tinggi,
-                berat,
-                gol_darah,
-                hobi,
-                email,
-                status,
-                id_jenjang,
-                warna_kulit,
-            },
+        // File foto diambil dari multer
+        const foto = req.file ? `/images/${req.baseUrl === '/santris' ? 'foto_santri' : 'foto_guru_pegawai'}/${req.file.filename}` : null;
+
+        // Transaksi Prisma
+        const result = await prisma.$transaction(async (prisma) => {
+            // Buat data Santri
+            const newSantri = await prisma.santri.create({
+                data: {
+                    nisn,
+                    nis,
+                    nama,
+                    foto, // Menyimpan path foto
+                    jk,
+                    tempat_ttl,
+                    tgl_ttl: tgl_ttl ? new Date(tgl_ttl) : null,
+                    agama,
+                    kesukuan,
+                    anak_ke,
+                    tinggi,
+                    berat,
+                    gol_darah,
+                    hobi,
+                    email,
+                    status,
+                    id_jenjang,
+                    warna_kulit,
+                },
+            });
+
+            // Buat data tambahan
+            await prisma.santri_kesehatan.create({
+                data: {
+                    id_santri: newSantri.id,
+                    riwayat_penyakit,
+                },
+            });
+
+            await prisma.santri_kontak.create({
+                data: {
+                    id_santri: newSantri.id,
+                    telepon,
+                    alamat,
+                    provinsi,
+                    kota,
+                    kode_pos,
+                },
+            });
+
+            await prisma.santri_pendidikan.create({
+                data: {
+                    id_santri: newSantri.id,
+                    asal_sekolah,
+                    alamat_sekolah,
+                    nomor_ujian_sd,
+                    nomor_ujian_smp,
+                    no_skhun,
+                    tahun_skhun,
+                },
+            });
+
+            await prisma.santri_status.create({
+                data: {
+                    id_santri: newSantri.id,
+                    tahun_ajaran_masuk,
+                    tahun_ajaran_tamat,
+                    tgl_masuk: tgl_masuk ? new Date(tgl_masuk) : null,
+                    tgl_keluar: tgl_keluar ? new Date(tgl_keluar) : null,
+                    pindahan,
+                    alasan_pindah,
+                    lanjut_ke,
+                },
+            });
+
+            await prisma.santri_keluarga.create({
+                data: {
+                    id_santri: newSantri.id,
+                    nama_ayah,
+                    nama_ibu,
+                    nama_wali,
+                    pendidikan_ayah,
+                    pendidikan_ibu,
+                    pekerjaan_ayah,
+                    pekerjaan_ibu,
+                    pekerjaan_wali,
+                    suku_marga,
+                    alamat: alamat_keluarga,
+                    telepon_ayah,
+                    telepon_ibu,
+                    penghasilan_ayah,
+                    penghasilan_ibu,
+                    email_ayah,
+                },
+            });
+
+            return newSantri; // Kembalikan hasil operasi
         });
 
-        // Buat data kesehatan
-        await prisma.santri_kesehatan.create({
-            data: {
-                id_santri: newSantri.id,
-                riwayat_penyakit,
-            },
-        });
-
-        // Buat data kontak
-        await prisma.santri_kontak.create({
-            data: {
-                id_santri: newSantri.id.toString(),
-                telepon,
-                alamat,
-                provinsi,
-                kota,
-                kode_pos,
-            },
-        });
-
-        // Buat data pendidikan
-        await prisma.santri_pendidikan.create({
-            data: {
-                id_santri: newSantri.id,
-                asal_sekolah,
-                alamat_sekolah,
-                nomor_ujian_sd,
-                nomor_ujian_smp,
-                no_skhun,
-                tahun_skhun,
-            },
-        });
-
-        // Buat data status
-        await prisma.santri_status.create({
-            data: {
-                id_santri: newSantri.id,
-                tahun_ajaran_masuk,
-                tahun_ajaran_tamat,
-                tgl_masuk: tgl_masuk ? new Date(tgl_masuk) : null,
-                tgl_keluar: tgl_keluar ? new Date(tgl_keluar) : null,
-                pindahan,
-                alasan_pindah,
-                lanjut_ke,
-            },
-        });
-
-        // Buat data keluarga
-        await prisma.santri_keluarga.create({
-            data: {
-                id_santri: newSantri.id,
-                nama_ayah,
-                nama_ibu,
-                nama_wali,
-                pendidikan_ayah,
-                pendidikan_ibu,
-                pekerjaan_ayah,
-                pekerjaan_ibu,
-                pekerjaan_wali,
-                suku_marga,
-                alamat: alamat_keluarga,
-                telepon_ayah,
-                telepon_ibu,
-                penghasilan_ayah,
-                penghasilan_ibu,
-                email_ayah,
-            },
-        });
-
-        res.status(201).json({ message: 'Santri created successfully', santri: newSantri });
+        res.status(201).json({ message: 'Santri created successfully', santri: result });
     } catch (error) {
-        next(error);
+        next(error); // Forward error ke middleware error handling
     }
 };
 
@@ -558,12 +559,18 @@ export const getSantriById = async (req, res, next) => {
 export const updateSantri = async (req, res, next) => {
     try {
         const { id } = req.params;
+
+        // Dapatkan foto lama dari database
+        const fotoDb = await prisma.santri.findFirst({
+            where: { id: parseInt(id) },
+            select: { foto: true },
+        });
+
+        // Parsing data form dari req.body.data (format JSON dalam form-data)
         const {
-            // Data santri
-            nis_nasional,
+            nisn,
             nis,
             nama,
-            foto,
             jk,
             tempat_ttl,
             tgl_ttl,
@@ -578,22 +585,18 @@ export const updateSantri = async (req, res, next) => {
             status,
             id_jenjang,
             warna_kulit,
-            // Data kesehatan
             riwayat_penyakit,
-            // Data kontak
             telepon,
             alamat,
             provinsi,
             kota,
             kode_pos,
-            // Data pendidikan
             asal_sekolah,
             alamat_sekolah,
             nomor_ujian_sd,
             nomor_ujian_smp,
             no_skhun,
             tahun_skhun,
-            // Data status
             tahun_ajaran_masuk,
             tahun_ajaran_tamat,
             tgl_masuk,
@@ -601,7 +604,6 @@ export const updateSantri = async (req, res, next) => {
             pindahan,
             alasan_pindah,
             lanjut_ke,
-            // Data keluarga
             nama_ayah,
             nama_ibu,
             nama_wali,
@@ -617,92 +619,117 @@ export const updateSantri = async (req, res, next) => {
             penghasilan_ayah,
             penghasilan_ibu,
             email_ayah,
-        } = req.body;
+        } = JSON.parse(req.body.data);
 
-        // Update data santri
-        const updatedSantri = await prisma.santri.update({
-            where: { id: parseInt(id) },
-            data: {
-                nis_nasional,
-                nis,
-                nama,
-                foto,
-                jk,
-                tempat_ttl,
-                tgl_ttl: tgl_ttl ? new Date(tgl_ttl) : null,
-                agama,
-                kesukuan,
-                anak_ke,
-                tinggi,
-                berat,
-                gol_darah,
-                hobi,
-                email,
-                status,
-                id_jenjang,
-                warna_kulit,
-            },
+        // File foto baru dari multer
+        const foto = req.file
+            ? `/images/${req.baseUrl === '/santris' ? 'foto_santri' : 'foto_guru_pegawai'}/${req.file.filename}`
+            : null;
+
+        // Hapus foto lama jika ada foto baru
+        if (fotoDb.foto && foto) {
+            try {
+                // Define __dirname for ES modules
+                const __filename = fileURLToPath(import.meta.url);
+                const __dirname = dirname(__filename);
+                const filePath = join(__dirname, '../../..', fotoDb.foto.replace('/images/', 'images/'));
+                await fs.unlink(filePath);
+            } catch (err) {
+                console.error(`Failed to delete old photo: ${err.message}`);
+            }
+        }
+
+        // Gunakan transaksi untuk memastikan semua update berhasil
+        const result = await prisma.$transaction(async (prisma) => {
+            const updatedSantri = await prisma.santri.update({
+                where: { id: parseInt(id) },
+                data: {
+                    nisn,
+                    nis,
+                    nama,
+                    jk,
+                    tempat_ttl,
+                    tgl_ttl: tgl_ttl ? new Date(tgl_ttl) : null,
+                    agama,
+                    kesukuan,
+                    anak_ke,
+                    tinggi,
+                    berat,
+                    gol_darah,
+                    hobi,
+                    email,
+                    status,
+                    id_jenjang,
+                    warna_kulit,
+                    ...(foto && { foto }),
+                },
+            });
+
+            await prisma.santri_kesehatan.updateMany({
+                where: { id_santri: parseInt(id) },
+                data: { riwayat_penyakit },
+            });
+
+            await prisma.santri_kontak.updateMany({
+                where: { id_santri: parseInt(id) },
+                data: { telepon, alamat, provinsi, kota, kode_pos },
+            });
+
+            await prisma.santri_pendidikan.updateMany({
+                where: { id_santri: parseInt(id) },
+                data: {
+                    asal_sekolah,
+                    alamat_sekolah,
+                    nomor_ujian_sd,
+                    nomor_ujian_smp,
+                    no_skhun,
+                    tahun_skhun,
+                },
+            });
+
+            await prisma.santri_status.updateMany({
+                where: { id_santri: parseInt(id) },
+                data: {
+                    tahun_ajaran_masuk,
+                    tahun_ajaran_tamat,
+                    tgl_masuk: tgl_masuk ? new Date(tgl_masuk) : null,
+                    tgl_keluar: tgl_keluar ? new Date(tgl_keluar) : null,
+                    pindahan,
+                    alasan_pindah,
+                    lanjut_ke,
+                },
+            });
+
+            await prisma.santri_keluarga.updateMany({
+                where: { id_santri: parseInt(id) },
+                data: {
+                    nama_ayah,
+                    nama_ibu,
+                    nama_wali,
+                    pendidikan_ayah,
+                    pendidikan_ibu,
+                    pekerjaan_ayah,
+                    pekerjaan_ibu,
+                    pekerjaan_wali,
+                    suku_marga,
+                    alamat: alamat_keluarga,
+                    telepon_ayah,
+                    telepon_ibu,
+                    penghasilan_ayah,
+                    penghasilan_ibu,
+                    email_ayah,
+                },
+            });
+
+            return updatedSantri;
         });
 
-        // Update data kesehatan
-        await prisma.santri_kesehatan.updateMany({
-            where: { id_santri: parseInt(id) },
-            data: { riwayat_penyakit },
-        });
-
-        // Update data kontak
-        await prisma.santri_kontak.updateMany({
-            where: { id_santri: id.toString() },
-            data: { telepon, alamat, provinsi, kota, kode_pos },
-        });
-
-        // Update data pendidikan
-        await prisma.santri_pendidikan.updateMany({
-            where: { id_santri: parseInt(id) },
-            data: { asal_sekolah, alamat_sekolah, nomor_ujian_sd, nomor_ujian_smp, no_skhun, tahun_skhun },
-        });
-
-        // Update data status
-        await prisma.santri_status.updateMany({
-            where: { id_santri: parseInt(id) },
-            data: {
-                tahun_ajaran_masuk,
-                tahun_ajaran_tamat,
-                tgl_masuk: tgl_masuk ? new Date(tgl_masuk) : null,
-                tgl_keluar: tgl_keluar ? new Date(tgl_keluar) : null,
-                pindahan,
-                alasan_pindah,
-                lanjut_ke,
-            },
-        });
-
-        // Update data keluarga
-        await prisma.santri_keluarga.updateMany({
-            where: { id_santri: parseInt(id) },
-            data: {
-                nama_ayah,
-                nama_ibu,
-                nama_wali,
-                pendidikan_ayah,
-                pendidikan_ibu,
-                pekerjaan_ayah,
-                pekerjaan_ibu,
-                pekerjaan_wali,
-                suku_marga,
-                alamat: alamat_keluarga,
-                telepon_ayah,
-                telepon_ibu,
-                penghasilan_ayah,
-                penghasilan_ibu,
-                email_ayah,
-            },
-        });
-
-        res.status(200).json({ message: 'Santri updated successfully', santri: updatedSantri });
+        res.status(200).json({ message: 'Santri updated successfully', santri: result });
     } catch (error) {
-        next(error);
+        next(error); // Forward error ke middleware error handling
     }
 };
+
 
 export const deleteSantri = async (req, res, next) => {
     try {

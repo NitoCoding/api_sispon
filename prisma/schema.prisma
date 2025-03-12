@@ -47,7 +47,7 @@ model santri_kesehatan {
 
 model santri_kontak {
   id        Int     @id @default(autoincrement())
-  id_santri String? @db.VarChar(100)
+  id_santri Int?
   telepon   String? @db.VarChar(100)
   alamat    String? @db.Text
   provinsi  String? @db.VarChar(100)
@@ -324,18 +324,18 @@ model data_penggajian {
 }
 
 model data_penilaian_karakter {
-  id                    Int                              @id @default(autoincrement())
-  tahun_akademik        String                           @db.VarChar(9)
+  id                    Int                            @id @default(autoincrement())
+  tahun_akademik        String                         @db.VarChar(9)
   semester              Int?
-  bulan                 Int                              @db.TinyInt
-  minggu                Int                              @db.TinyInt
-  id_siswa              String                           @db.VarChar(15)
+  bulan                 Int                            @db.TinyInt
+  minggu                Int                            @db.TinyInt
+  id_siswa              String                         @db.VarChar(15)
   id_kriteria           Int
   nilai                 data_penilaian_karakter_nilai
   lokasi                data_penilaian_karakter_lokasi
-  created_at            DateTime?                        @default(now()) @db.Timestamp(0)
-  updated_at            DateTime?                        @default(now()) @db.Timestamp(0)
-  ref_kriteria_karakter ref_kriteria_karakter            @relation(fields: [id_kriteria], references: [id], onUpdate: Restrict, map: "data_penilaian_karakter_ibfk_1")
+  created_at            DateTime?                      @default(now()) @db.Timestamp(0)
+  updated_at            DateTime?                      @default(now()) @db.Timestamp(0)
+  ref_kriteria_karakter ref_kriteria_karakter          @relation(fields: [id_kriteria], references: [id], onUpdate: Restrict, map: "data_penilaian_karakter_ibfk_1")
 
   @@index([id_kriteria], map: "id_kriteria")
   @@index([id_siswa, tahun_akademik, semester, bulan, minggu], map: "indeks_siswa_periode")
@@ -627,7 +627,6 @@ enum data_detail_penggajian_jenis_komponen {
   potongan
   pinjaman
 }
-
 
 enum ref_jenis_keuangan_kategori {
   pemasukan

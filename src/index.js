@@ -7,6 +7,8 @@ import morgan from 'morgan';
 import { config } from './config/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { logger } from './config/logger.js';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 const app = express();
 
@@ -34,18 +36,20 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+app.use('/images', express.static(path.join(__dirname, '../../images')));
+
 // API Routes
 import userRoutes from './routes/user.route.js';
 import authRoutes from './routes/auth.route.js';
 import guru_pegawaiRoutes from "./routes/guru_pegawai.route.js";
 import santriRoutes from "./routes/santri.route.js";
-
 import rombelRoutes from "./routes/rombel.route.js";
+import { authenticate } from "./middleware/auth.middleware.js";
+import * as path from "node:path";
 
-
-// Register API routes
-// app.use('/api');
-
+app.use(authenticate);
 app.use('/users', userRoutes);
 app.use('/auth', authRoutes);
 app.use('/guru-pegawais', guru_pegawaiRoutes);

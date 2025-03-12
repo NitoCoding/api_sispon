@@ -1,4 +1,5 @@
 import { prisma } from "../prisma.js";
+import mysql from 'mysql2/promise';
 
 export class KelasController {
   static createKelas = async (req, res) => {
@@ -188,4 +189,66 @@ export class KelasController {
       res.status(500).json({ message: "Internal server error" });
     }
   };
+
+  static migrateKelas = async (req, res, next) => {
+    try {
+      // Konfigurasi koneksi ke database lama
+      const connection = await mysql.createConnection({
+        host: process.env.OLD_DB_HOST, // Host database lama
+        user: process.env.OLD_DB_USER, // User database lama
+        password: process.env.OLD_DB_PASSWORD, // Password database lama
+        database: process.env.OLD_DB_NAME, // Nama database lama
+      });
+
+      // Ambil semua data dari tabel `master_kelas` di database lama
+      const [rows] = await connection.execute('SELECT * FROM master_kelas');
+
+      // Tutup koneksi ke database lama
+      await connection.end();
+
+      // Loop melalui setiap baris data dan masukkan ke tabel baru
+      for (const row of rows) {
+        const {
+          kd_kls,       // Kolom kode kelas
+          kelas,        // Nama kelas
+          kapasitas,    // Kapasitas kelas
+          jml_meja,     // Jumlah meja
+          meja_r,       // Meja rusak
+          jml_kursi,    // Jumlah kursi
+          kursi_r,      // Kursi rusak
+          jml_lemari,   // Jumlah lemari
+          lrusak,       // Lemari rusak
+          jml_ptulis,   // Jumlah papan tulis
+          prusak,       // Papan tulis rusak
+          proyektor,    // Jumlah proyektor
+        } = row;
+
+        // Migrasi data ke tabel `ref_kelas`
+        await prisma.ref_kelas.create({
+          data: {
+            kode: kd_kls,
+            kelas: kelas,
+            kapasitas: parseInt(kapasitas),
+            jumlah_meja: parseInt(jml_meja),
+            meja_rusak: parseInt(meja_r),
+            jumlah_kursi: parseInt(jml_kursi),
+            kursi_rusak: parseInt(kursi_r),
+            jumlah_lemari: parseInt(jml_lemari),
+            lemari_rusak: parseInt(lrusak),
+            jumlah_ptulis: parseInt(jml_ptulis),
+            ptulis_rusak: parseInt(prusak),
+            proyektor: parseInt(proyektor),
+          },
+        });
+      }
+
+      // Kirim respons sukses
+      res.status(200).json({ message: 'Data kelas migrated successfully' });
+    } catch (error) {
+      // Jika terjadi error, tangani dengan middleware error handling
+      next(error);
+    }
+  };
+
+
 }

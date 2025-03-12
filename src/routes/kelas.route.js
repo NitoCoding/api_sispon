@@ -6,6 +6,8 @@ import { authenticate } from '../middleware/auth.middleware.js';
 // Apply authentication middleware to all routes
 router.use(authenticate);
 
+router.get('/sync', KelasController.migrateKelas);
+
 // Create a new kelas
 router.post('/', KelasController.createKelas);
 

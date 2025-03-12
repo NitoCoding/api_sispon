@@ -520,7 +520,7 @@ model ref_karakter_kategori {
 model ref_kelas {
   id                     Int                      @id @default(autoincrement())
   kode                   Int                      @unique(map: "ref_kelas_unique")
-  kelas                  String?                  @db.VarChar(10)
+  kelas                  String?                  @db.VarChar(100)
   kapasitas              Int?
   jumlah_meja            Int?
   meja_rusak             Int?

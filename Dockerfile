@@ -1,24 +1,32 @@
 # Gunakan base image Node.js
 FROM node:18-alpine
 
-# Tentukan working directory dalam container
-WORKDIR .
+# Set working directory
+WORKDIR /app
 
-# Salin file package.json dan package-lock.json
+# Copy package files for better layer caching
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies with minimal size
+RUN npm ci --only=production --no-audit --no-optional && \
+    npm cache clean --force && \
+    rm -rf /root/.npm/_cacache
 
-# Salin seluruh source code ke dalam container
+# Copy prisma schema
+COPY prisma ./prisma/
+
+# Generate Prisma client
+RUN npx prisma generate && \
+    rm -rf /root/.cache
+
+# Copy source code
 COPY . .
 
 # Expose port sesuai dengan API
 EXPOSE 8001
 
-RUN chmod +x node_modules/.bin/nodemon
+# Set Node.js to production mode
+ENV NODE_ENV=production
 
-RUN npx prisma generate
-
-# Perintah untuk menjalankan aplikasi
+# Run the application
 CMD ["npm", "run", "dev"]

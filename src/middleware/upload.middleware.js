@@ -12,13 +12,24 @@ const storage = diskStorage({
     destination: (req, file, cb) => {
         const baseDir = join(__dirname, '../../../images'); // Path to the `images` folder relative to this file
 
-        let folder = baseDir; // Default folder
-        if (req.baseUrl === '/santris') {
-            folder = join(baseDir, 'foto_santri'); // Folder for Santri
-        } else if (req.baseUrl === '/guru-pegawais') {
-            folder = join(baseDir, 'foto_guru_pegawai'); // Folder for Guru/Pegawai
+        const urlParts = req.baseUrl.split('/').filter(part => part.length > 0);
+        let folderName = '';
+        
+        if (urlParts.includes('santri') || urlParts.includes('santris')) {
+            folderName = 'foto_santri';
+        } else if (urlParts.includes('guru') || urlParts.includes('pegawai')) {
+            folderName = 'foto_guru_pegawai';
+        } else {
+            folderName = 'other'; // Default folder
         }
-        cb(null, folder);
+        const destPath = join(baseDir, folderName);
+        
+        // Ensure the directory exists
+        if (!fs.existsSync(destPath)) {
+            fs.mkdirSync(destPath, { recursive: true });
+        }
+        
+        cb(null, destPath);
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);

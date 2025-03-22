@@ -200,7 +200,7 @@ model data_kelas {
 model data_kelas_anggota {
   id         Int       @id @default(autoincrement())
   id_kelas   Int?
-  id_santri  String?   @db.VarChar(100)
+  id_santri  Int?
   created_at DateTime? @default(now()) @db.Timestamp(0)
 }
 

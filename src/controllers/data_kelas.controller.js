@@ -2,7 +2,7 @@ import { prisma } from "../prisma.js"
 
 export class DataKelasController {
   // Data Kelas Operations
-  static createDataKelas = async (req, res) => {
+  static createDataKelas = async (req, res, next) => {
     try {
       const { id_semester, id_mapel, nama } = req.body;
 
@@ -20,16 +20,23 @@ export class DataKelasController {
         data: kelas
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error)
     }
   }
 
-  static getAllDataKelas = async (req, res) => {
+  static getAllDataKelas = async (req, res, next) => {
     try {
+      const {tahun_ajaran, semester} = req.query;
+
+      if(!tahun_ajaran || !semester) return res.status(400).json({
+        success: false,
+        message: 'Tahun ajaran and semester is required' 
+      })
       const kelas = await prisma.data_kelas.findMany({
+        where: {
+          id_semester: parseInt(semester),
+          id_semester: parseInt(semester),
+        },
         include: {
           data_absensi: true,
           data_rencana_penilaian: true
@@ -41,14 +48,11 @@ export class DataKelasController {
         data: kelas
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error)
     }
   }
 
-  static getDataKelasById = async (req, res) => {
+  static getDataKelasById = async (req, res, next) => {
     try {
       const { id } = req.params;
 
@@ -72,14 +76,11 @@ export class DataKelasController {
         data: kelas
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error)
     }
   }
 
-  static updateDataKelas = async (req, res) => {
+  static updateDataKelas = async (req, res, next) => {
     try {
       const { id } = req.params;
       const { id_semester, id_mapel, nama, status } = req.body;
@@ -99,14 +100,11 @@ export class DataKelasController {
         data: kelas
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error)
     }
   }
 
-  static deleteDataKelas = async (req, res) => {
+  static deleteDataKelas = async (req, res, next) => {
     try {
       const { id } = req.params;
 
@@ -119,15 +117,12 @@ export class DataKelasController {
         message: 'Data kelas deleted successfully'
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error)
     }
   }
 
   // Data Kelas Anggota Operations
-  static addKelasAnggota = async (req, res) => {
+  static addKelasAnggota = async (req, res, next) => {
     try {
       const { id_kelas, id_santri } = req.body;
 
@@ -143,14 +138,11 @@ export class DataKelasController {
         data: anggota
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error)
     }
   }
 
-  static getKelasAnggota = async (req, res) => {
+  static getKelasAnggota = async (req, res, next) => {
     try {
       const { id_kelas } = req.params;
 
@@ -163,14 +155,11 @@ export class DataKelasController {
         data: anggota
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error)
     }
   }
 
-  static removeKelasAnggota = async (req, res) => {
+  static removeKelasAnggota = async (req, res, next) => {
     try {
       const { id } = req.params;
 
@@ -183,15 +172,12 @@ export class DataKelasController {
         message: 'Anggota kelas removed successfully'
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error)
     }
   }
 
   // Data Kelas Pengajar Operations
-  static addKelasPengajar = async (req, res) => {
+  static addKelasPengajar = async (req, res, next) => {
     try {
       const { id, id_guru, id_kelas } = req.body;
 
@@ -208,14 +194,11 @@ export class DataKelasController {
         data: pengajar
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error)
     }
   }
 
-  static getKelasPengajar = async (req, res) => {
+  static getKelasPengajar = async (req, res, next) => {
     try {
       const { id_kelas } = req.params;
 
@@ -228,14 +211,11 @@ export class DataKelasController {
         data: pengajar
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error)
     }
   }
 
-  static removeKelasPengajar = async (req, res) => {
+  static removeKelasPengajar = async (req, res, next) => {
     try {
       const { id } = req.params;
 
@@ -248,10 +228,7 @@ export class DataKelasController {
         message: 'Pengajar kelas removed successfully'
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error)
     }
   }
 }

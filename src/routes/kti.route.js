@@ -1,14 +1,17 @@
 import express from 'express';
 const router = express.Router();
+import { body } from 'express-validator';
 import { KtiController } from '../controllers/kti.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 
 // Apply authentication middleware to all routes
 // router.use(authenticate);
 
-// Create a new kelas
 router.get('/', KtiController.getAllKti);
-
+router.post('/', KtiController.createKti);
+router.post('/batch', KtiController.batchCreateKti);
+router.put('/:id', KtiController.updateKti);
+router.delete('/:id', KtiController.deleteKti);
 // // Get all kelas
 // router.get('/', KelasController.getAllKelas);
 

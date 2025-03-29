@@ -1,4 +1,5 @@
 generator client {
+
   provider        = "prisma-client-js"
   previewFeatures = ["views"]
 }
@@ -201,7 +202,7 @@ model data_kelas {
 model data_kelas_anggota {
   id         Int       @id @default(autoincrement())
   id_kelas   Int?
-  id_santri  String?   @db.VarChar(100)
+  id_santri  Int?
   created_at DateTime? @default(now()) @db.Timestamp(0)
 }
 
@@ -313,6 +314,7 @@ model data_penggajian {
 
 model data_penilaian_karakter {
   id                    Int                            @id @default(autoincrement())
+
   id_tahun_ajaran       Int
   bulan                 Int                            @db.TinyInt
   minggu                Int                            @db.TinyInt
@@ -619,6 +621,7 @@ model data_kompetensi {
   created_by      Int
 }
 
+
 view data_kti_view {
   id                Int                   @unique(map: "data_kti_view_unique") @default(0)
   nama_santri       String?               @db.VarChar(100)
@@ -653,7 +656,6 @@ view data_kelas_view {
 
   @@ignore
 }
-
 enum data_detail_penggajian_jenis_komponen {
   pokok
   penyesuaian
@@ -814,6 +816,7 @@ enum data_kompetensi_tingkat {
   EMPTY_ENUM_VALUE @map("")
 }
 
+
 enum data_kelas_view_status {
   aktif
   nonaktif
@@ -828,3 +831,4 @@ enum data_rombel_view_status {
   aktif
   nonaktif
 }
+=======

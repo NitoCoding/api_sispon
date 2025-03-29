@@ -1,14 +1,72 @@
 import { prisma } from '../prisma.js';
 
+export class KtiController {
+    static getAllKti = async (req, res, next) => {
+        try {
+            // const tahun_ajaran = req..tahun_ajaran;
+            // const semester = req.params.semester;
+            const { tahun_ajaran, semester } = req.query;
+            if(!tahun_ajaran || !semester) return res.status(400).json({
+                success: false,
+                message: 'Tahun ajaran and semester is required' 
+            })
+            // // const ktiData = await prisma.data_nilai_kti.findMany();
+            // const ktiData = await prisma.data_nilai_kti.findMany({
+            //     where: {
+            //         id_tahun_ajaran: parseInt(tahun_ajaran),
+            //         id_semester: parseInt(semester)
+            //     }
+            // });
+            // const santri = await prisma.data_kti_view.findMany({
+            //     where: {
+            //         id_tahun_ajaran: parseInt(tahun_ajaran)
+            //     },
+            //     include: {
+            //         data_rombel_anggota : true
+            //     }
+            // });
+            // if (!ktiData) return res.status(404).json({ message: "KTI data not found" });
+            const ktiData = await prisma.data_kti_view.findMany();
+        
+        // Group data by rombel
+        const groupedData = ktiData.reduce((acc, curr) => {
+            const rombelKey = `${curr.nama_rombel}-${curr.nama_tahun_ajaran}`;
+            
+            if (!acc[rombelKey]) {
+                acc[rombelKey] = {
+                    nama_rombel: curr.nama_rombel,
+                    tahun_ajaran: curr.nama_tahun_ajaran,
+                    santri: []
+                };
+            }
+            
+            // Add santri if not already in the array
+            const santriExists = acc[rombelKey].santri.some(s => s.nama_santri === curr.nama_santri);
+            if (!santriExists) {
+                acc[rombelKey].santri.push({
+                    nama_santri: curr.nama_santri,
+                    kti_judul: curr.judul,
+                    kti_nilai: curr.nilai
+                });
+            }
+            
+            return acc;
+        }, {});
+
+        // Convert to array format
+        const formattedData = Object.values(groupedData);
+
+        res.status(200).json({
+            success: true,
+            data: formattedData
+        });
+        } catch (error) {
+            next(error);
+        }
+    };
+    
+}
 // Get all KTI data
-export const getAllKti = async (req, res, next) => {
-    try {
-        const ktiData = await prisma.data_nilai_kti.findMany();
-        res.status(200).json(ktiData);
-    } catch (error) {
-        next(error);
-    }
-};
 
 // Get single KTI data by ID
 export const getKtiById = async (req, res, next) => {

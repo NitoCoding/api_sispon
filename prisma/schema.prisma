@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["views"]
 }
 
 datasource db {
@@ -200,7 +201,7 @@ model data_kelas {
 model data_kelas_anggota {
   id         Int       @id @default(autoincrement())
   id_kelas   Int?
-  id_santri  Int?
+  id_santri  String?   @db.VarChar(100)
   created_at DateTime? @default(now()) @db.Timestamp(0)
 }
 
@@ -618,6 +619,41 @@ model data_kompetensi {
   created_by      Int
 }
 
+view data_kti_view {
+  id                Int                   @unique(map: "data_kti_view_unique") @default(0)
+  nama_santri       String?               @db.VarChar(100)
+  nama_rombel       String?               @db.VarChar(100)
+  status            data_kti_view_status? @default(aktif)
+  judul             String?               @db.VarChar(100)
+  nilai             Int?
+  nama_tahun_ajaran String?               @db.VarChar(100)
+  id_tahun_ajaran   Int                   @default(0)
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view data_rombel_view {
+  id                Int                      @default(0)
+  nama_tahun_ajaran String?                  @db.VarChar(100)
+  nama              String?                  @db.VarChar(100)
+  status            data_rombel_view_status? @default(aktif)
+  nip               String?                  @db.VarChar(35)
+  nama_wali_kelas   String?                  @db.VarChar(100)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view data_kelas_view {
+  id                Int                     @default(0)
+  nama              String?                 @db.VarChar(100)
+  status            data_kelas_view_status? @default(aktif)
+  nama_semester     String                  @db.VarChar(50)
+  nama_tahun_ajaran String?                 @db.VarChar(100)
+  nama_mapel        String?                 @db.VarChar(100)
+
+  @@ignore
+}
+
 enum data_detail_penggajian_jenis_komponen {
   pokok
   penyesuaian
@@ -776,4 +812,19 @@ enum data_kompetensi_tingkat {
   capaian
   tujuan
   EMPTY_ENUM_VALUE @map("")
+}
+
+enum data_kelas_view_status {
+  aktif
+  nonaktif
+}
+
+enum data_kti_view_status {
+  aktif
+  nonaktif
+}
+
+enum data_rombel_view_status {
+  aktif
+  nonaktif
 }

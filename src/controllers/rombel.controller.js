@@ -4,6 +4,8 @@ import { prisma } from '../prisma.js';
 // Get all data_rombel
 export const getAllRombel = async (req, res, next) => {
     try {
+        const tahun_ajaran = req.query.tahun_ajaran;
+        
         const rombels = await prisma.data_rombel.findMany();
         res.status(200).json(rombels);
     } catch (error) {

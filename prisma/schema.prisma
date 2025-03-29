@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+
+  provider        = "prisma-client-js"
   previewFeatures = ["views"]
 }
 
@@ -313,10 +314,11 @@ model data_penggajian {
 
 model data_penilaian_karakter {
   id                    Int                            @id @default(autoincrement())
-  tahun_akademik        String                         @db.VarChar(9)
+
+  id_tahun_ajaran       Int
   bulan                 Int                            @db.TinyInt
   minggu                Int                            @db.TinyInt
-  id_siswa              String                         @db.VarChar(15)
+  id_santri             Int
   id_kriteria           Int
   nilai                 data_penilaian_karakter_nilai
   lokasi                data_penilaian_karakter_lokasi
@@ -326,7 +328,7 @@ model data_penilaian_karakter {
   ref_kriteria_karakter ref_kriteria_karakter          @relation(fields: [id_kriteria], references: [id], onUpdate: Restrict, map: "data_penilaian_karakter_ibfk_1")
 
   @@index([id_kriteria], map: "id_kriteria")
-  @@index([id_siswa, tahun_akademik, semester, bulan, minggu], map: "indeks_siswa_periode")
+  @@index([id_santri, id_tahun_ajaran, semester, bulan, minggu], map: "indeks_siswa_periode")
 }
 
 model data_penyesuaian_gaji {
@@ -619,6 +621,41 @@ model data_kompetensi {
   created_by      Int
 }
 
+
+view data_kti_view {
+  id                Int                   @unique(map: "data_kti_view_unique") @default(0)
+  nama_santri       String?               @db.VarChar(100)
+  nama_rombel       String?               @db.VarChar(100)
+  status            data_kti_view_status? @default(aktif)
+  judul             String?               @db.VarChar(100)
+  nilai             Int?
+  nama_tahun_ajaran String?               @db.VarChar(100)
+  id_tahun_ajaran   Int                   @default(0)
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view data_rombel_view {
+  id                Int                      @default(0)
+  nama_tahun_ajaran String?                  @db.VarChar(100)
+  nama              String?                  @db.VarChar(100)
+  status            data_rombel_view_status? @default(aktif)
+  nip               String?                  @db.VarChar(35)
+  nama_wali_kelas   String?                  @db.VarChar(100)
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view data_kelas_view {
+  id                Int                     @default(0)
+  nama              String?                 @db.VarChar(100)
+  status            data_kelas_view_status? @default(aktif)
+  nama_semester     String                  @db.VarChar(50)
+  nama_tahun_ajaran String?                 @db.VarChar(100)
+  nama_mapel        String?                 @db.VarChar(100)
+
+  @@ignore
+}
 enum data_detail_penggajian_jenis_komponen {
   pokok
   penyesuaian
@@ -778,3 +815,20 @@ enum data_kompetensi_tingkat {
   tujuan
   EMPTY_ENUM_VALUE @map("")
 }
+
+
+enum data_kelas_view_status {
+  aktif
+  nonaktif
+}
+
+enum data_kti_view_status {
+  aktif
+  nonaktif
+}
+
+enum data_rombel_view_status {
+  aktif
+  nonaktif
+}
+=======

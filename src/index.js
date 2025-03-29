@@ -48,6 +48,7 @@ import santriRoutes from "./routes/santri.route.js";
 import rombelRoutes from "./routes/rombel.route.js";
 import { authenticate } from "./middleware/auth.middleware.js";
 import tahunAjaranRoutes from './routes/tahun_ajaran.route.js'
+import ktiRoute from './routes/kti.route.js';
 import * as path from "node:path";
 
 app.use('/auth', authRoutes);
@@ -57,6 +58,7 @@ app.use(authenticate);
 app.use('/users', userRoutes);
 app.use('/santris', santriRoutes);
 app.use('/rombels', rombelRoutes);
+app.use('/kti', ktiRoute)
 
 
 // Error handling

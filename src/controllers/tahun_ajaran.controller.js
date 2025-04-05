@@ -11,10 +11,7 @@ static getAllTahunAjaran = async (req, res) => {
         tahun_mulai: 'desc'
       }
     });
-    res.json({
-      status: 'success',
-      data: tahunAjaran
-    });
+    res.status(200).json(tahunAjaran);
   } catch (error) {
     res.status(500).json({
       status: 'error',

@@ -5,17 +5,20 @@ const router = express.Router();
 import {
     createGuruPegawai, deleteGuruPegawai,
     getAllGuruPegawai,
-    getGuruPegawaiById, migrateGuruPegawai,
-    updateGuruPegawai
+    getGuruPegawaiById, getGuruPegawaiDetails, migrateGuruPegawai,
+    updateGuruPegawai, updateGuruPegawaiDetails
 } from "../controllers/guru_pegawai.controller.js";
 import { authenticate } from '../middleware/auth.middleware.js';
+import {upload} from "../middleware/upload.middleware.js";
 
 router.get('/sync', migrateGuruPegawai);
+router.get('/details', authenticate, getGuruPegawaiDetails);
+router.put('/details', authenticate, upload.single("foto"), updateGuruPegawaiDetails);
 
-router.post('/', authenticate, createGuruPegawai);
+router.post('/', authenticate, upload.single("foto"), createGuruPegawai);
 router.get('/', authenticate, getAllGuruPegawai);
 router.get('/:id', authenticate, getGuruPegawaiById);
-router.put('/:id', authenticate, updateGuruPegawai);
+router.put('/:id', authenticate, upload.single("foto"), updateGuruPegawai);
 router.delete('/:id', authenticate, deleteGuruPegawai);
 
 export default router;

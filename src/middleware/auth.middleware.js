@@ -13,7 +13,7 @@ export const authenticate = async (req, res, next) => {
     let payload;
     try {
       payload  = await JWTService.verifyToken(token);
-      if (!payload.role || !payload.academic_year || !payload.semester) {
+      if (!payload.role || !payload.semester) {
         return res.status(403).json({ message: "Invalid access token" });
       }
     } catch (err) {

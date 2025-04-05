@@ -5,7 +5,6 @@ export class KelasController {
   static createKelas = async (req, res) => {
     try {
       const {
-        kode,
         kelas,
         kapasitas,
         jumlah_meja,
@@ -20,18 +19,21 @@ export class KelasController {
       } = req.body;
 
       // Validate required fields
-      if (!kode || !kelas) {
-        return res.status(400).json({ message: "Kode and kelas are required" });
+      if (!kelas) {
+        return res.status(400).json({ message: "Kelas is required" });
       }
 
-      // Check if kode already exists
-      const existingKelas = await prisma.ref_kelas.findUnique({
-        where: { kode },
-      });
+      let kode;
+      let existingKelas;
+      do {
+        // Generate random 6-digit code
+        kode = Math.floor(100000 + Math.random() * 900000);
 
-      if (existingKelas) {
-        return res.status(400).json({ message: "Kode kelas already exists" });
-      }
+        // Check if kode already exists
+        existingKelas = await prisma.ref_kelas.findUnique({
+          where: { kode },
+        });
+      } while (existingKelas); // Repeat if code exists
 
       const newKelas = await prisma.ref_kelas.create({
         data: {

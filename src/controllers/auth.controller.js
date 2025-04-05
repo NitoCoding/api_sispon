@@ -4,8 +4,14 @@ import { encrypt, decrypt } from '../helpers.js';
 import { prisma } from '../prisma.js';
 
 export const login = async (req, res, next) => {
-  const { pegId, password, academic_year, semester } = req.body;
-  if (!pegId || !password || !academic_year || !semester) {
+  const { pegId, password } = req.body;
+  const semester = await prisma.ref_semester.findFirst({
+    where: {
+      status: 'aktif'
+    }
+  })
+  console.log(semester);
+  if (!pegId || !password) {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
@@ -33,7 +39,7 @@ export const login = async (req, res, next) => {
     }
 
     // Generate access token dan refresh token
-    const accessToken = await JWTService.generateToken({ userId: validUser.id, role: validUser.role, academic_year, semester });
+    const accessToken = await JWTService.generateToken({ userId: validUser.id, role: validUser.role, semester: semester.id });
     const refreshToken = await JWTService.generateToken({ userId: validUser.id }, '7d');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
@@ -49,6 +55,55 @@ export const login = async (req, res, next) => {
     next(error);
   }
 };
+
+export const chooseSemester = async (req, res, next) => {
+  try {
+    const { id_semester } = req.params;
+
+    let currentToken = JWTService.extractTokenFromHeader(req);
+
+    const newPreviewsToken = res.getHeader("new-authorization");
+
+    if (newPreviewsToken) {
+      console.log("newPreviewsToken", newPreviewsToken);
+      currentToken = newPreviewsToken;
+    }
+
+    const decodedToken = JWTService.decodeToken(currentToken);
+    if (!decodedToken) {
+      return res.status(401).json({ message: "Invalid token" });
+    }
+
+    let currentPayload = {
+      userId: decodedToken.userId,
+      role: decodedToken.role,
+      semester: id_semester
+    };
+
+    const currentTime = Math.floor(Date.now() / 1000);
+    const expiresAt = decodedToken.exp;
+    const remainingTime = expiresAt - currentTime;
+
+    if (remainingTime <= 0) {
+      return res.status(401).json({ message: "Token has already expired" });
+    }
+
+    const newAccessToken = await JWTService.generateToken(
+        currentPayload,
+        `${remainingTime}s`
+    );
+
+    console.log(JWTService.decodeToken(newAccessToken));
+
+    res.setHeader("new-authorization", `Bearer ${newAccessToken}`);
+    res.json({
+      message: "Semester updated successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+}
 
 export const register = async (req, res, next) => {
   try {

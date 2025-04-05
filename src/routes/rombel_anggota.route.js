@@ -1,0 +1,14 @@
+import express from 'express';
+const router = express.Router();
+import { RombelAnggotaController } from "../controllers/rombel_anggota.controller.js";
+import { authenticate } from '../middleware/auth.middleware.js';
+
+// Apply authentication middleware to all routes
+router.use(authenticate);
+
+router.get('/sync', RombelAnggotaController.syncRombel);
+router.get('/move', RombelAnggotaController.moveAnggota);
+
+router.post('/', RombelAnggotaController.createRombelAnggota);
+
+export default router;

@@ -1,6 +1,10 @@
 import { AppError } from '../middleware/errorHandler.js';
 import { prisma } from '../prisma.js';
 import mysql from 'mysql2/promise';
+import {JWTService} from "../services/jwt.service.js";
+import {fileURLToPath} from "url";
+import {dirname, join} from "path";
+import { promises as fs } from 'fs';
 
 // Create Guru Pegawai
 export const createGuruPegawai = async (req, res, next) => {
@@ -9,7 +13,6 @@ export const createGuruPegawai = async (req, res, next) => {
             nip,
             tahun_terdaftar,
             nama_gp,
-            foto_gp,
             jk,
             tempat_ttl,
             tgl_ttl,
@@ -23,7 +26,9 @@ export const createGuruPegawai = async (req, res, next) => {
             unit,
             alamat,
             telepon,
-        } = req.body;
+        } = JSON.parse(req.body.data);
+
+        const foto_gp = req.file ? `/uploads/${req.baseUrl === '/santris' ? 'foto_santri' : 'foto_guru_pegawai'}/${req.file.filename}` : null;
 
         // Buat guru pegawai baru
         const newGuruPegawai = await prisma.guru_pegawai.create({
@@ -84,64 +89,156 @@ export const getGuruPegawaiById = async (req, res, next) => {
     }
 };
 
-// Update Guru Pegawai
+export const getGuruPegawaiDetails = async (req, res, next) => {
+    try {
+        const token = req.headers.authorization?.split(" ")[1];
+
+        if (!token) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
+        const userId = JWTService.decodeToken(token).userId;
+
+        const user = await prisma.users.findUnique({
+            where: { id: userId }
+        })
+
+        const guruPegawai = await prisma.guru_pegawai.findUnique({
+            where: { id: parseInt(user.kode_pegawai) },
+        });
+
+        if (!guruPegawai) {
+            return res.status(404).json({ message: 'Guru Pegawai not found' });
+        }
+
+        res.status(200).json(guruPegawai);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const updateGuruPegawaiDetails = async (req, res, next) => {
+    try {
+        const token = req.headers.authorization?.split(" ")[1];
+        if (!token) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        const userId = JWTService.decodeToken(token).userId;
+        const user = await prisma.users.findUnique({ where: { id: userId } });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const existingGuruPegawai = await prisma.guru_pegawai.findUnique({
+            where: { id: parseInt(user.kode_pegawai) },
+        });
+
+        if (!existingGuruPegawai) {
+            return res.status(404).json({ message: "Guru Pegawai not found" });
+        }
+
+        const fotoDb = await prisma.guru_pegawai.findFirst({
+            where: { id: parseInt(user.kode_pegawai) },
+            select: { foto_gp: true },
+        });
+
+        const requestData = req.body.data ? JSON.parse(req.body.data) : {};
+        const allowedFields = [
+            "nip", "tahun_terdaftar", "nama_gp", "jk", "tempat_ttl", "tgl_ttl",
+            "status_pernikahan", "jumlah_anak", "pendidikan", "jabatan", "ket_jabatan",
+            "status_gp", "status_kp", "unit", "alamat", "telepon"
+        ];
+
+        const updateData = {};
+        for (const field of allowedFields) {
+            if (requestData.hasOwnProperty(field)) {
+                updateData[field] = requestData[field];
+            }
+        }
+
+        // Handle foto_gp
+        if (req.file) {
+            updateData.foto_gp = `/uploads/${req.baseUrl === '/santris' ? 'foto_santri' : 'foto_guru_pegawai'}/${req.file.filename}`;
+
+            if (fotoDb.foto_gp) {
+                try {
+                    const __filename = fileURLToPath(import.meta.url);
+                    const __dirname = dirname(__filename);
+                    const filePath = join(__dirname, '../../..', fotoDb.foto_gp.replace('/uploads/', 'uploads/'));
+                    await fs.unlink(filePath);
+                } catch (err) {
+                    console.error(`Failed to delete old photo: ${err.message}`);
+                }
+            }
+        }
+
+        // Update only provided fields
+        const updatedGuruPegawai = await prisma.guru_pegawai.update({
+            where: { id: parseInt(user.kode_pegawai) },
+            data: updateData,
+        });
+
+        res.status(200).json(updatedGuruPegawai);
+    } catch (error) {
+        console.error(error);
+        next(error);
+    }
+};
+
 export const updateGuruPegawai = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const {
-            nip,
-            tahun_terdaftar,
-            nama_gp,
-            foto_gp,
-            jk,
-            tempat_ttl,
-            tgl_ttl,
-            status_pernikahan,
-            jumlah_anak,
-            pendidikan,
-            jabatan,
-            ket_jabatan,
-            status_gp,
-            status_kp,
-            unit,
-            alamat,
-            telepon,
-        } = req.body;
 
-        // Cek apakah guru pegawai ada
         const existingGuruPegawai = await prisma.guru_pegawai.findUnique({
             where: { id: parseInt(id) },
         });
 
         if (!existingGuruPegawai) {
-            return res.status(404).json({ message: 'Guru Pegawai not found' });
+            return res.status(404).json({ message: "Guru Pegawai not found" });
         }
 
-        // Update guru pegawai
-        const updatedGuruPegawai = await prisma.guru_pegawai.update({
+        const fotoDb = await prisma.guru_pegawai.findFirst({
             where: { id: parseInt(id) },
-            data: {
-                nip,
-                tahun_terdaftar,
-                nama_gp,
-                foto_gp,
-                jk,
-                tempat_ttl,
-                tgl_ttl,
-                status_pernikahan,
-                jumlah_anak,
-                pendidikan,
-                jabatan,
-                ket_jabatan,
-                status_gp,
-                status_kp,
-                unit,
-                alamat,
-                telepon,
-            },
+            select: { foto_gp: true },
         });
 
-        res.status(200).json({ message: 'Guru Pegawai updated successfully', guru_pegawai: updatedGuruPegawai });
+        const requestData = req.body.data ? JSON.parse(req.body.data) : {};
+        const allowedFields = [
+            "nip", "tahun_terdaftar", "nama_gp", "jk", "tempat_ttl", "tgl_ttl",
+            "status_pernikahan", "jumlah_anak", "pendidikan", "jabatan", "ket_jabatan",
+            "status_gp", "status_kp", "unit", "alamat", "telepon"
+        ];
+
+        const updateData = {};
+        for (const field of allowedFields) {
+            if (requestData.hasOwnProperty(field)) {
+                updateData[field] = requestData[field];
+            }
+        }
+
+        if (req.file) {
+            updateData.foto_gp = `/uploads/${req.baseUrl === '/santris' ? 'foto_santri' : 'foto_guru_pegawai'}/${req.file.filename}`;
+
+            if (fotoDb.foto_gp) {
+                try {
+                    const __filename = fileURLToPath(import.meta.url);
+                    const __dirname = dirname(__filename);
+                    const filePath = join(__dirname, '../../..', fotoDb.foto_gp.replace('/uploads/', 'uploads/'));
+                    await fs.unlink(filePath);
+                } catch (err) {
+                    console.error(`Failed to delete old photo: ${err.message}`);
+                }
+            }
+        }
+
+        const result = await prisma.$transaction(async (prisma) => {
+            return await prisma.guru_pegawai.update({
+                where: { id: parseInt(id) },
+                data: updateData,
+            });
+        });
+
+        res.status(200).json(result);
     } catch (error) {
         next(error);
     }

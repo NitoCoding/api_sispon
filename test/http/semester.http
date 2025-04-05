@@ -1,0 +1,4 @@
+GET {{baseUrl}}/semesters/sync
+
+###
+GET {{baseUrl}}/semesters/active

@@ -48,7 +48,8 @@ static getTahunAjaranById = async (req, res) => {
 
 static createTahunAjaran = async (req, res) => {
   try {
-    const { nama, tahun_mulai, tahun_selesai, status } = req.body;
+    const { tahun_mulai, tahun_selesai, status } = req.body;
+    const nama = `${tahun_mulai}/${tahun_selesai}`;
 
     // Validate year range
     if (tahun_selesai <= tahun_mulai) {
@@ -61,24 +62,12 @@ static createTahunAjaran = async (req, res) => {
     // Check for overlapping years
     const existingTahunAjaran = await prisma.ref_tahun_ajaran.findFirst({
       where: {
-        OR: [
-          {
-            AND: [
-              { tahun_mulai: { lte: tahun_mulai } },
-              { tahun_selesai: { gte: tahun_mulai } }
-            ]
-          },
-          {
-            AND: [
-              { tahun_mulai: { lte: tahun_selesai } },
-              { tahun_selesai: { gte: tahun_selesai } }
-            ]
-          }
-        ]
+        nama,
       }
     });
 
     if (existingTahunAjaran) {
+      console.log(existingTahunAjaran);
       return res.status(400).json({
         status: 'error',
         message: 'Terdapat overlap dengan tahun ajaran yang sudah ada'
@@ -94,10 +83,7 @@ static createTahunAjaran = async (req, res) => {
       }
     });
 
-    res.status(201).json({
-      status: 'success',
-      data: tahunAjaran
-    });
+    res.status(201).json(tahunAjaran);
   } catch (error) {
     res.status(500).json({
       status: 'error',

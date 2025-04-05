@@ -46,21 +46,21 @@ import authRoutes from './routes/auth.route.js';
 import guru_pegawaiRoutes from "./routes/guru_pegawai.route.js";
 import santriRoutes from "./routes/santri.route.js";
 import rombelRoutes from "./routes/rombel.route.js";
-import { authenticate } from "./middleware/auth.middleware.js";
 import tahunAjaranRoutes from './routes/tahun_ajaran.route.js'
 import kelasRoutes from './routes/kelas.route.js'
-import ktiRoute from './routes/kti.route.js';
+import semesterRoutes from './routes/semester.route.js'
+import rombelAnggotaRoutes from './routes/rombel_anggota.route.js'
 import * as path from "node:path";
 
 app.use('/auth', authRoutes);
 app.use('/tahun-ajarans', tahunAjaranRoutes)
 app.use('/guru-pegawais', guru_pegawaiRoutes);
-app.use(authenticate);
 app.use('/users', userRoutes);
 app.use('/santris', santriRoutes);
 app.use('/rombels', rombelRoutes);
 app.use('/kelas', kelasRoutes);
-app.use('/kti', ktiRoute)
+app.use('/semesters', semesterRoutes);
+app.use('/rombel-anggotas', rombelAnggotaRoutes);
 
 // Error handling
 app.use(errorHandler);

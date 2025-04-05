@@ -8,19 +8,10 @@ router.use(authenticate);
 
 router.get('/sync', KelasController.migrateKelas);
 
-// Create a new kelas
 router.post('/', KelasController.createKelas);
-
-// Get all kelas
 router.get('/', KelasController.getAllKelas);
-
-// Get a single kelas by ID
 router.get('/:id', KelasController.getKelasById);
-
-// Update a kelas
 router.put('/:id', KelasController.updateKelas);
-
-// Delete a kelas
 router.delete('/:id', KelasController.deleteKelas);
 
 export default router;

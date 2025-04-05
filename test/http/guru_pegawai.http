@@ -1,0 +1,6 @@
+GET {{baseUrl}}/guru-pegawais
+Authorization: Bearer {{token}}
+
+###
+GET {{baseUrl}}/guru-pegawais/details
+Authorization: Bearer {{token}}

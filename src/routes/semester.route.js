@@ -3,22 +3,14 @@ const router = express.Router();
 import { SemesterController } from '../controllers/semester.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 
-// Apply authentication middleware to all routes
-router.use(authenticate);
+router.get('/active', authenticate, SemesterController.getActiveSemester);
+router.get('/sync', authenticate, SemesterController.migrateSemester);
+router.put('/active/:id', authenticate, SemesterController.setActiveSemester);
 
-// Create a new semester
-router.post('/', SemesterController.createSemester);
-
-// Get all semesters
-router.get('/', SemesterController.getAllSemesters);
-
-// Get a single semester by ID
-router.get('/:id', SemesterController.getSemesterById);
-
-// Update a semester
-router.put('/:id', SemesterController.updateSemester);
-
-// Delete a semester
-router.delete('/:id', SemesterController.deleteSemester);
+router.post('/', authenticate, SemesterController.createSemester);
+router.get('/', authenticate, SemesterController.getAllSemesters);
+router.get('/:id', authenticate, SemesterController.getSemesterById);
+router.put('/:id', authenticate, SemesterController.updateSemester);
+router.delete('/:id', authenticate, SemesterController.deleteSemester);
 
 export default router;

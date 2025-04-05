@@ -1,4 +1,5 @@
-import prisma from '../prisma.js';
+import { prisma } from '../prisma.js';
+import mysql from 'mysql2/promise';
 
 export class SemesterController {
   static createSemester = async(req, res) =>  {
@@ -28,16 +29,9 @@ export class SemesterController {
 
   static getAllSemesters= async(req, res) =>  {
     try {
-      const semesters = await prisma.ref_semester.findMany({
-        include: {
-          ref_tahun_ajaran: true
-        }
-      });
+      const semesters = await prisma.ref_semester.findMany({});
 
-      res.json({
-        success: true,
-        data: semesters
-      });
+      res.status(200).json(semesters);
     } catch (error) {
       res.status(500).json({
         success: false,
@@ -73,6 +67,48 @@ export class SemesterController {
         success: false,
         message: error.message
       });
+    }
+  }
+
+  static getActiveSemester = async(req, res) => {
+    try{
+      const active_semester = await prisma.ref_semester.findFirst({
+        where: {
+          status: 'aktif'
+        }
+      })
+      res.status(200).json(active_semester);
+    } catch (e) {
+      res.status(500).json({
+        "message" : e.message
+      })
+    }
+  }
+
+  static setActiveSemester = async(req, res) => {
+    try{
+      const { id } = req.params;
+      await prisma.ref_semester.updateMany({
+        where: {
+          status: 'aktif'
+        },
+        data: {
+          status: 'nonaktif'
+        }
+      })
+      const updatedSemester = await prisma.ref_semester.update({
+        where: {
+          id: parseInt(id)
+        },
+        data: {
+          status: 'aktif'
+        }
+      })
+      res.status(200).json(updatedSemester)
+    } catch (e) {
+      res.status(500).json({
+        "message" : e.message
+      })
     }
   }
 
@@ -120,6 +156,46 @@ export class SemesterController {
         success: false,
         message: error.message
       });
+    }
+  }
+
+  static migrateSemester = async(req, res) =>  {
+    try {
+      const tahun_ajaran = await prisma.ref_tahun_ajaran.findMany();
+
+      for(const tahun of tahun_ajaran) {
+        const semester = await prisma.ref_semester.findFirst({
+          where: { id_tahun_ajaran: parseInt(tahun.id) },
+        });
+        if(!semester){
+          const semester = await prisma.ref_semester.create({
+            data: {
+              id_tahun_ajaran: tahun.id,
+              nama: 'Ganjil ' + tahun.nama,
+              urutan: 1,
+              status: 'aktif'
+            }
+          });
+          const semester2 = await prisma.ref_semester.create({
+            data: {
+              id_tahun_ajaran: tahun.id,
+              nama: 'Genap ' + tahun.nama,
+              urutan: 2,
+              status: 'aktif'
+            }
+          });
+        }
+      }
+      res.status(200).json({
+        success: true,
+        message: 'Semester migrated successfully'
+      })
+    } catch (error) {
+      console.log(error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
     }
   }
 }

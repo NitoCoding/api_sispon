@@ -623,8 +623,7 @@ export const updateSantri = async (req, res, next) => {
 
         // File foto baru dari multer
         const foto = req.file
-            ? `/images/${req.baseUrl.split("/")[1]}/${req.file.filename}`
-            : null;
+            ? `/images/foto_santri/${req.file.filename}`
 
         // Hapus foto lama jika ada foto baru
         if (fotoDb.foto && foto) {

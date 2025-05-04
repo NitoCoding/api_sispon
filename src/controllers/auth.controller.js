@@ -39,15 +39,15 @@ export const login = async (req, res, next) => {
     }
 
     // Generate access token dan refresh token
-    const accessToken = await JWTService.generateToken({ userId: validUser.id, role: validUser.role, semester: semester.id });
+    const accessToken = await JWTService.generateToken({ userId: validUser.id, semester: semester.id });
     const refreshToken = await JWTService.generateToken({ userId: validUser.id }, '7d');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     // Hapus semua token refresh lama milik user dari database
-    await prisma.RefreshToken.deleteMany({ where: { userId: validUser.id } });
+    await prisma.refresh_token.deleteMany({ where: { userId: validUser.id } });
 
     // Tambahkan token refresh baru ke database
-    await prisma.RefreshToken.create({ data: { token: refreshToken, userId: validUser.id, expiresAt } });
+    await prisma.refresh_token.create({ data: { token: refreshToken, userId: validUser.id, expiresAt } });
 
     // Kirim token ke client
     res.json({ access_token: accessToken });
@@ -76,7 +76,6 @@ export const chooseSemester = async (req, res, next) => {
 
     let currentPayload = {
       userId: decodedToken.userId,
-      role: decodedToken.role,
       semester: id_semester
     };
 
@@ -104,35 +103,6 @@ export const chooseSemester = async (req, res, next) => {
     next(error);
   }
 }
-
-export const register = async (req, res, next) => {
-  try {
-    const { name, email, password } = req.body;
-
-    // TODO: Add user creation logic here
-    // For demo purposes, we'll create a mock user
-    const user = {
-      id: 1,
-      name,
-      email,
-      role: 'user'
-    };
-
-    // Generate tokens
-    const { accessToken, refreshToken } = JWTService.generateTokens(user);
-
-    res.status(201).json({
-      status: 'success',
-      data: {
-        user,
-        accessToken,
-        refreshToken
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 
 export const logout = async (req, res, next) => {
   try {

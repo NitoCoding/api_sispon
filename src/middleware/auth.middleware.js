@@ -1,6 +1,5 @@
-import { JWTService } from '../services/jwt.service.js';
-import { AppError } from './errorHandler.js';
-import { prisma } from '../prisma.js';
+import {JWTService} from '../services/jwt.service.js';
+import {prisma} from '../prisma.js';
 
 export const authenticate = async (req, res, next) => {
   try {
@@ -13,13 +12,17 @@ export const authenticate = async (req, res, next) => {
     let payload;
     try {
       payload  = await JWTService.verifyToken(token);
-      if (!payload.role || !payload.semester) {
+      if (!payload.userId || !payload.semester) {
         return res.status(403).json({ message: "Invalid access token" });
       }
+      req.user = await prisma.users.findUnique({
+        where: {id: payload.userId},
+      });
     } catch (err) {
+      console.log(err.message);
       if (err.message === "Token has expired") {
         // Token expired, coba refresh token
-        const refreshTokenRecord = await prisma.RefreshToken.findFirst({
+        const refreshTokenRecord = await prisma.refresh_token.findFirst({
           where: { userId: err.payload?.userId },
         });
 
@@ -40,11 +43,8 @@ export const authenticate = async (req, res, next) => {
 
           const newAccessToken = await JWTService.generateToken({
             userId: newAccessUser.id,
-            role: newAccessUser.role,
-            academic_year: JWTService.decodeToken(token).academic_year,
             semester: JWTService.decodeToken(token).semester,
           });
-
           req.user = newAccessUser;
           res.setHeader("new-authorization", `Bearer ${newAccessToken}`);
           return next();
@@ -55,25 +55,77 @@ export const authenticate = async (req, res, next) => {
       return res.status(403).json({ message: "Invalid token" });
     }
 
-    // Jika token valid, lanjutkan dengan request
-    req.user = payload;
     next();
   } catch (err) {
     res.status(500).json({ message: "Authentication failed", error: err.message });
   }
 };
 
-// Optional: Role-based authorization middleware
-export const authorize = (...roles) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return next(new AppError('User not authenticated', 401));
-    }
+export const checkPermission = (requiredPermission) => {
+  return async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      const roleId = req.user?.role_id;
 
-    if (!roles.includes(req.user.role)) {
-      return next(new AppError('Not authorized to access this route', 403));
-    }
+      if (!userId || !roleId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
 
-    next();
+      // Ambil izin dari role_permissions
+      const rolePermissions = await prisma.role_permissions.findMany({
+        where: {
+          role_id: roleId,
+        },
+        include: {
+          permissions: {
+            select: {
+              permission_code: true,
+            },
+          },
+        },
+      });
+
+      // Ambil izin sementara (temporary_permissions) untuk user atau role
+      const temporaryPermissions = await prisma.temporary_permissions.findMany({
+        where: {
+          OR: [
+            { user_id: userId },
+            { role_id: roleId },
+          ],
+          AND: {
+            start_date: { lte: new Date() },
+            end_date: { gte: new Date() },
+          },
+        },
+        include: {
+          permissions: {
+            select: {
+              permission_code: true,
+            },
+          },
+        },
+      });
+
+      // Gabungkan semua permission_code
+      const permissions = [
+        ...rolePermissions.map(rp => rp.permissions.permission_code),
+        ...temporaryPermissions.map(tp => tp.permissions.permission_code),
+      ];
+
+      // Cek apakah requiredPermission ada di daftar izin
+      const hasPermission = permissions.includes(requiredPermission);
+
+      console.log('User permissions:', permissions);
+      console.log('Has permission:', hasPermission);
+
+      if (!hasPermission) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+
+      next();
+    } catch (error) {
+      console.error('Error checking permission:', error);
+      return res.status(500).json({ message: 'Internal Server Error' });
+    }
   };
 };

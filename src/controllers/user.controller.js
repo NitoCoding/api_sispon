@@ -126,6 +126,43 @@ export const deleteUser = async (req, res, next) => {
   }
 };
 
+export const fillRole = async (req, res, next) => {
+  try {
+
+    const kode = {
+      'k': 'Kepala Sekolah',
+      'r': 'Kurikulum',
+      's': 'Kesantrian',
+      'a': 'Kesiswaan',
+      'u': 'Tatausaha',
+      'g': 'Keuangan',
+      'i': 'Wali Kelas',
+      'p': 'Guru',
+      'd': 'Administrator',
+      'f': 'Wali Fiah'
+    };
+
+    const users = await prisma.users.findMany();
+    for (const user of users) {
+      const roleId = await prisma.roles.findFirst({
+        where: {
+          role_name: kode[user.role],
+        }
+      });
+      if (roleId) {
+        await prisma.users.update({
+          where: { id: user.id },
+          data: { role_id: roleId.id },
+        });
+      }
+    }
+
+    res.status(200).json("Role updated successfully");
+  } catch (error) {
+    next(error);
+  }
+}
+
 export const migrateUsers = async (req, res, next) => {
   try {
     // Konfigurasi koneksi ke database lama

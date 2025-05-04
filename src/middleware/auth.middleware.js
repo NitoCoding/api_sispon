@@ -19,7 +19,7 @@ export const authenticate = async (req, res, next) => {
     } catch (err) {
       if (err.message === "Token has expired") {
         // Token expired, coba refresh token
-        const refreshTokenRecord = await prisma.RefreshToken.findFirst({
+        const refreshTokenRecord = await prisma.refresh_token.findFirst({
           where: { userId: err.payload?.userId },
         });
 
@@ -41,7 +41,7 @@ export const authenticate = async (req, res, next) => {
           const newAccessToken = await JWTService.generateToken({
             userId: newAccessUser.id,
             role: newAccessUser.role,
-            academic_year: JWTService.decodeToken(token).academic_year,
+            // academic_year: JWTService.decodeToken(token).academic_year,
             semester: JWTService.decodeToken(token).semester,
           });
 

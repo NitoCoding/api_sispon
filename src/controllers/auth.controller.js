@@ -26,7 +26,7 @@ export const login = async (req, res, next) => {
     }
 
     // Cari user dengan password yang cocok
-    let validUser = null;
+    let validUser;
     for (const user of users) {
       if (password === decrypt(user.password)) {
         validUser = user;
@@ -37,6 +37,7 @@ export const login = async (req, res, next) => {
     if (!validUser) {
       return res.status(401).json({ message: "Invalid password" });
     }
+    // console.log(validUser.id);
 
     // Generate access token dan refresh token
     const accessToken = await JWTService.generateToken({ userId: validUser.id, role: validUser.role, semester: semester.id });
@@ -44,10 +45,10 @@ export const login = async (req, res, next) => {
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     // Hapus semua token refresh lama milik user dari database
-    await prisma.RefreshToken.deleteMany({ where: { userId: validUser.id } });
+    await prisma.refresh_token.deleteMany({ where: { userId: validUser.id } });
 
     // Tambahkan token refresh baru ke database
-    await prisma.RefreshToken.create({ data: { token: refreshToken, userId: validUser.id, expiresAt } });
+    await prisma.refresh_token.create({ data: { token: refreshToken, userId: validUser.id, expiresAt } });
 
     // Kirim token ke client
     res.json({ access_token: accessToken });

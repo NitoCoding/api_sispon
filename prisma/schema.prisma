@@ -8,7 +8,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model refresh_token {
   id        Int      @id @default(autoincrement())
   token     String   @unique
@@ -685,7 +684,6 @@ model data_kkm_detail {
 
   @@index([mapel_id], map: "data_kkm_detail_data_absensi_FK")
   @@index([kurikulum_id], map: "data_kkm_detail_ref_kurikulum_FK")
-
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -700,60 +698,6 @@ model data_kompetensi_dasar {
   created_by   DateTime @default(now()) @db.Timestamp(0)
 
   @@ignore
-}
-
-model permissions {
-  id                    Int                     @id @default(autoincrement())
-  permission_code       String                  @unique(map: "permission_code_unique") @db.VarChar(50)
-  endpoint              String                  @db.VarChar(255)
-  description           String?                 @db.VarChar(255)
-  role_permissions      role_permissions[]
-  temporary_permissions temporary_permissions[]
-}
-
-model refresh_token {
-  id        Int      @id @default(autoincrement())
-  token     String   @unique
-  userId    Int
-  expiresAt DateTime
-  users     users    @relation(fields: [userId], references: [id])
-
-  @@index([userId], map: "refresh_token_userId_fkey")
-}
-
-model role_permissions {
-  role_id       Int
-  permission_id Int
-  roles         roles       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "role_permissions_ibfk_1")
-  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "role_permissions_ibfk_2")
-
-  @@id([role_id, permission_id])
-  @@index([permission_id], map: "permission_id")
-}
-
-model roles {
-  id                    Int                     @id @default(autoincrement())
-  role_code             String                  @unique(map: "role_code_unique") @db.VarChar(2)
-  role_name             String                  @db.VarChar(50)
-  role_permissions      role_permissions[]
-  temporary_permissions temporary_permissions[]
-  users                 users[]
-}
-
-model temporary_permissions {
-  id            Int         @id @default(autoincrement())
-  permission_id Int
-  role_id       Int?
-  user_id       Int?
-  start_date    DateTime    @db.DateTime(0)
-  end_date      DateTime    @db.DateTime(0)
-  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "temporary_permissions_ibfk_1")
-  roles         roles?      @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "temporary_permissions_ibfk_2")
-  users         users?      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "temporary_permissions_ibfk_3")
-
-  @@index([permission_id], map: "permission_id")
-  @@index([role_id], map: "role_id")
-  @@index([user_id], map: "user_id")
 }
 
 /// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.

@@ -100,7 +100,7 @@ export class UserController {
   }
 };
 
-export const fillRole = async (req, res, next) => {
+static fillRole = async (req, res, next) => {
   try {
 
     const kode = {
@@ -137,7 +137,7 @@ export const fillRole = async (req, res, next) => {
   }
 }
 
-export const migrateUsers = async (req, res, next) => {
+static migrateUsers = async (req, res, next) => {
   try {
     // Konfigurasi koneksi ke database lama
     const connection = await mysql.createConnection({
@@ -172,10 +172,11 @@ export const migrateUsers = async (req, res, next) => {
       res
         .status(200)
         .json({ message: "User updated successfully", user: updatedUser });
-    } catch (error) {
+      } 
+    }catch (error) {
       next(error);
     }
-  };
+}
 
   // Delete User
   static deleteUser = async (req, res, next) => {

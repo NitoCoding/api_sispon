@@ -89,9 +89,79 @@ export class UserController {
         ? encrypt(password)
         : existingUser.password;
 
-      // Update user
-      const updatedUser = await prisma.users.update({
-        where: { id: parseInt(id) },
+    // Hapus user
+    await prisma.users.delete({
+      where: { id: parseInt(id) },
+    });
+
+    res.status(200).json({ message: 'User deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const fillRole = async (req, res, next) => {
+  try {
+
+    const kode = {
+      'k': 'Kepala Sekolah',
+      'r': 'Kurikulum',
+      's': 'Kesantrian',
+      'a': 'Kesiswaan',
+      'u': 'Tatausaha',
+      'g': 'Keuangan',
+      'i': 'Wali Kelas',
+      'p': 'Guru',
+      'd': 'Administrator',
+      'f': 'Wali Fiah'
+    };
+
+    const users = await prisma.users.findMany();
+    for (const user of users) {
+      const roleId = await prisma.roles.findFirst({
+        where: {
+          role_name: kode[user.role],
+        }
+      });
+      if (roleId) {
+        await prisma.users.update({
+          where: { id: user.id },
+          data: { role_id: roleId.id },
+        });
+      }
+    }
+
+    res.status(200).json("Role updated successfully");
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const migrateUsers = async (req, res, next) => {
+  try {
+    // Konfigurasi koneksi ke database lama
+    const connection = await mysql.createConnection({
+      host: process.env.OLD_DB_HOST, // Host database lama
+      user: process.env.OLD_DB_USER, // User database lama
+      password: process.env.OLD_DB_PASSWORD, // Password database lama
+      database: process.env.OLD_DB_NAME, // Nama database lama
+    });
+
+    // Ambil semua data dari tabel lama
+    const [rows] = await connection.execute('SELECT * FROM tb_user');
+
+    // Tutup koneksi ke database lama
+    await connection.end();
+
+    // Loop melalui setiap baris data dan masukkan ke tabel baru
+    for (const row of rows) {
+      const { kd_gp, pas2, ket } = row;
+
+      // Hash password dari kolom `pas2`
+      const hashedPassword = encrypt(pas2);
+
+      // Buat user baru di tabel baru
+      await prisma.users.create({
         data: {
           kode_pegawai,
           password: encryptedPassword, // Simpan password yang sudah dienkripsi

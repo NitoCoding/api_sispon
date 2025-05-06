@@ -45,6 +45,7 @@ export class RombelAnggotaController {
                 })
             }
 
+
             res.status(200).json({"message": "Anggota moved successfully"});
 
         } catch (error) {

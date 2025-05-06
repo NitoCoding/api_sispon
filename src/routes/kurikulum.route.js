@@ -8,7 +8,7 @@ import { MapelController } from '../controllers/mapel.controller.js';
 router.use(authenticate);
 
 // Create a new kurikulum
-router.post('/', KurikulumController.createKurikulum);
+router.post('/' ,KurikulumController.createKurikulum);
 
 // Get all kurikulum
 router.get('/', KurikulumController.getAllKurikulum);

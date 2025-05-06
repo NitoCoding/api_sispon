@@ -26,7 +26,7 @@ export const login = async (req, res, next) => {
     }
 
     // Cari user dengan password yang cocok
-    let validUser = null;
+    let validUser;
     for (const user of users) {
       if (password === decrypt(user.password)) {
         validUser = user;
@@ -37,6 +37,7 @@ export const login = async (req, res, next) => {
     if (!validUser) {
       return res.status(401).json({ message: "Invalid password" });
     }
+    // console.log(validUser.id);
 
     // Generate access token dan refresh token
     const accessToken = await JWTService.generateToken({ userId: validUser.id, semester: semester.id });

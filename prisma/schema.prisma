@@ -8,6 +8,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
 model refresh_token {
   id        Int      @id @default(autoincrement())
   token     String   @unique
@@ -152,6 +153,7 @@ model data_absensi {
   created_at          DateTime?             @default(now()) @db.Timestamp(0)
   data_kelas          data_kelas            @relation(fields: [id_kelas], references: [id], onUpdate: Restrict, map: "data_absensi_ibfk_1")
   data_absensi_detail data_absensi_detail[]
+  data_kkm_detail     data_kkm_detail[]
 
   @@index([id_kelas], map: "id_kelas")
 }
@@ -167,14 +169,6 @@ model data_absensi_detail {
 
   @@index([id_absensi], map: "id_absensi")
   @@index([id_status], map: "id_status")
-}
-
-model data_adab_asrama {
-  id Int @id
-}
-
-model data_adab_sekolah {
-  id Int @id @default(autoincrement())
 }
 
 model data_beasiswa {
@@ -216,10 +210,6 @@ model data_eskul {
   id_mapel   Int?
   tgl_masuk  DateTime? @db.Date
   tgl_keluar DateTime? @db.Date
-}
-
-model data_ibadah_asrama {
-  id Int @id
 }
 
 model data_kehadiran_pegawai {
@@ -536,10 +526,11 @@ model ref_jenis_potongan {
 }
 
 model ref_jenis_tunjangan {
-  id           Int      @id @default(autoincrement())
-  nama         String?  @db.VarChar(100)
-  deskripsi    String?  @db.VarChar(100)
+  id           Int                           @id @default(autoincrement())
+  nama         String?                       @db.VarChar(100)
+  deskripsi    String?                       @db.VarChar(100)
   status_tetap Boolean?
+  kategori     ref_jenis_tunjangan_kategori?
 }
 
 model ref_karakter_kategori {
@@ -592,8 +583,11 @@ model ref_kriteria_karakter {
 }
 
 model ref_kurikulum {
-  id   Int     @id @default(autoincrement())
-  nama String? @db.VarChar(100)
+  id              Int               @id @default(autoincrement())
+  nama            String?           @db.VarChar(100)
+  visi            String?           @db.Text
+  misi            String?           @db.Text
+  data_kkm_detail data_kkm_detail[]
 }
 
 model ref_lokasi {
@@ -603,14 +597,15 @@ model ref_lokasi {
 }
 
 model ref_mapel {
-  id           Int     @id @default(autoincrement())
-  kode         String  @db.VarChar(10)
-  nama         String? @db.VarChar(100)
+  id           Int             @id @default(autoincrement())
+  kode         String          @db.VarChar(10)
+  nama         String?         @db.VarChar(100)
   kkm_1        Int?
   kkm_2        Int?
   kkm_3        Int?
-  keterangan   String? @db.VarChar(100)
+  keterangan   String?         @db.VarChar(100)
   id_kurikulum Int?
+  tipe         ref_mapel_tipe?
 
   @@unique([kode, keterangan], map: "ref_mapel_kode_IDX")
 }
@@ -650,23 +645,120 @@ model users {
   password              String?                 @db.VarChar(255)
   role_id               Int
   refresh_token         refresh_token[]
-  roles                 roles?                  @relation(fields: [role_id], references: [id])
+  temporary_permissions temporary_permissions[]
+  roles                 roles                   @relation(fields: [role_id], references: [id])
+
+  @@index([role_id], map: "users_role_id_fkey")
+}
+
+model data_kompetensi_inti {
+  id           Int                           @id @default(autoincrement())
+  id_kurikulum Int?
+  grade        Int?
+  kode_ki      data_kompetensi_inti_kode_ki?
+  deskripsi    String?                       @db.Text
+  created_by   DateTime                      @default(now()) @db.Timestamp(0)
+}
+
+model data_adab_asrama {
+  id Int @id
+}
+
+model data_adab_sekolah {
+  id Int @id @default(autoincrement())
+}
+
+model data_ibadah_asrama {
+  id Int @id
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model data_kkm_detail {
+  id            Int            @id @default(autoincrement())
+  kurikulum_id  Int?
+  grade         Int?
+  mapel_id      Int?
+  kkm           Int?
+  tahun_ajaran  String?        @db.VarChar(9)
+  data_absensi  data_absensi?  @relation(fields: [mapel_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "data_kkm_detail_data_absensi_FK")
+  ref_kurikulum ref_kurikulum? @relation(fields: [kurikulum_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "data_kkm_detail_ref_kurikulum_FK")
+
+  @@index([mapel_id], map: "data_kkm_detail_data_absensi_FK")
+  @@index([kurikulum_id], map: "data_kkm_detail_ref_kurikulum_FK")
+
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model data_kompetensi_dasar {
+  id           Int?
+  id_kurikulum Int?
+  id_mapel     Int?
+  grade        Int?
+  id_ki        Int?
+  kode_kd      String?  @db.VarChar(10)
+  deskripsi    String?  @db.Text
+  created_by   DateTime @default(now()) @db.Timestamp(0)
+
+  @@ignore
+}
+
+model permissions {
+  id                    Int                     @id @default(autoincrement())
+  permission_code       String                  @unique(map: "permission_code_unique") @db.VarChar(50)
+  endpoint              String                  @db.VarChar(255)
+  description           String?                 @db.VarChar(255)
+  role_permissions      role_permissions[]
   temporary_permissions temporary_permissions[]
 }
 
-model data_kompetensi {
-  id              Int                      @id @default(autoincrement())
-  kode_kompetensi String                   @db.VarChar(10)
-  id_kurikulum    Int?
-  id_mapel        String?                  @db.VarChar(5)
-  fase            String?                  @db.VarChar(5)
-  tingkat         data_kompetensi_tingkat?
-  konten          String?                  @db.Text
-  created_by      Int
+model refresh_token {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  expiresAt DateTime
+  users     users    @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "refresh_token_userId_fkey")
 }
 
+model role_permissions {
+  role_id       Int
+  permission_id Int
+  roles         roles       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "role_permissions_ibfk_1")
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "role_permissions_ibfk_2")
+
+  @@id([role_id, permission_id])
+  @@index([permission_id], map: "permission_id")
+}
+
+model roles {
+  id                    Int                     @id @default(autoincrement())
+  role_code             String                  @unique(map: "role_code_unique") @db.VarChar(2)
+  role_name             String                  @db.VarChar(50)
+  role_permissions      role_permissions[]
+  temporary_permissions temporary_permissions[]
+  users                 users[]
+}
+
+model temporary_permissions {
+  id            Int         @id @default(autoincrement())
+  permission_id Int
+  role_id       Int?
+  user_id       Int?
+  start_date    DateTime    @db.DateTime(0)
+  end_date      DateTime    @db.DateTime(0)
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "temporary_permissions_ibfk_1")
+  roles         roles?      @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "temporary_permissions_ibfk_2")
+  users         users?      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "temporary_permissions_ibfk_3")
+
+  @@index([permission_id], map: "permission_id")
+  @@index([role_id], map: "role_id")
+  @@index([user_id], map: "user_id")
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 view data_kti_view {
-  id                Int                   @unique(map: "data_kti_view_unique") @default(0)
+  id                Int                   @default(0)
   nama_santri       String?               @db.VarChar(100)
   nama_rombel       String?               @db.VarChar(100)
   status            data_kti_view_status? @default(aktif)
@@ -674,6 +766,8 @@ view data_kti_view {
   nilai             Int?
   nama_tahun_ajaran String?               @db.VarChar(100)
   id_tahun_ajaran   Int                   @default(0)
+
+  @@ignore
 }
 
 /// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -852,12 +946,23 @@ enum santri_status_enum {
   Pindah
 }
 
-enum data_kompetensi_tingkat {
-  inti
-  dasar
-  capaian
-  tujuan
-  EMPTY_ENUM_VALUE @map("")
+enum data_kompetensi_inti_kode_ki {
+  KI_1 @map("KI-1")
+  KI_2 @map("KI-2")
+  KI_3 @map("KI-3")
+  KI_4 @map("KI-4")
+}
+
+enum ref_jenis_tunjangan_kategori {
+  pendidikan
+  tunjangan
+  jabatan
+}
+
+enum ref_mapel_tipe {
+  academic
+  religious
+  extracurricular
 }
 
 enum data_kelas_view_status {

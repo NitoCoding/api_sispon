@@ -20,6 +20,6 @@ router.post('/', createUser);
 router.put('/:id', updateUser);
 router.delete('/:id', deleteUser);
 
-router.get('/sync', migrateUsers);
+router.get('/sync', UserController.migrateUsers);
 
 export default router;

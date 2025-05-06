@@ -375,6 +375,7 @@ export const getAllSantri = async (req, res, next) => {
         const semester = await prisma.ref_semester.findFirst({
             where: { id: parseInt(decoded.semester) },
         });
+        console.log(decoded);
         if (!semester) {
             return res.status(400).json({ message: "Invalid token: Missing semester" });
         }

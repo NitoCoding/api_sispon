@@ -177,7 +177,7 @@ export class KompetensiController {
     }
   }
 
-  static deleteKompetensi = async (req, res) => {
+  static deleteKompetensiInti = async (req, res) => {
     try {
       const { id } = req.params;
 

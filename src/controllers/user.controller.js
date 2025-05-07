@@ -241,4 +241,27 @@ static migrateUsers = async (req, res, next) => {
       next(error);
     }
   };
+
+  static getRoleByKodePegawai = async (req, res, next) => {
+    try {
+        const { kode_pegawai } = req.params;
+        const role = await prisma.users.findMany({
+            where: { kode_pegawai: kode_pegawai },
+        });
+
+        const formattedOutput = role.map((item) => {
+            return {
+                kode_pegawai: item.kode_pegawai,
+                role: item.role,
+            };
+        });
+        return res.status(200).json({
+            success: true,
+            message: "Get role by nip successfully",
+            data: formattedOutput,
+        });
+    } catch (error) {
+        next(new AppError(error.message, 500));
+    }
+}
 }

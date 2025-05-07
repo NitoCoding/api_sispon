@@ -9,6 +9,8 @@ import { authenticate } from '../middleware/auth.middleware.js';
 
 router.get('/fill-role', UserController.fillRole);
 
+router.get('/:kode-pegawai/roles', UserController.getRoleByKodePegawai);
+
 router.get('/', authenticate, UserController.getAllUsers);
 router.get('/:id', UserController.getUserById);
 router.post('/', UserController.createUser);

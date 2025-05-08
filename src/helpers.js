@@ -52,46 +52,12 @@ export const decrypt = (encryptedText) => {
     }
 };
 
-const generateQRCode = async (imagePath) => {
-    try {
-        // Baca file gambar sebagai base64
-        const imageBuffer = await fs.readFile(imagePath);
-        const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
 
-        // Generate QR code dari data base64 gambar
-        const qrDataURL = await QRCode.toDataURL(base64Image);
 
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(`<img src="${qrDataURL}" alt="QR Code TTD" />`);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Error generating QR code');
+
+export const trimmedString = (str) => {
+    if (typeof str !== 'string') {
+        throw new AppError('Input must be a string', 400);
     }
-}
-
-const htmlToPdf = async (templateReportName) => {
-
-    const templatePath = path.join(__dirname, 'views', 'templateReportName.ejs');
-    
-    try {
-        // Render HTML dari EJS template
-        const html = await ejs.renderFile(templatePath, { users });
-
-        // Set header untuk download sebagai PDF
-        res.header('Content-Type', 'application/pdf');
-        res.header('Content-Disposition', 'attachment; filename=Laporan_Pengguna.pdf');
-
-        // Konversi HTML ke PDF menggunakan wkhtmltopdf
-        wkhtmltopdf(html, {
-            output: null, // Output sebagai stream
-            pageSize: 'A4',
-            orientation: 'Portrait',
-            marginTop: '20mm',
-            marginBottom: '20mm',
-            marginLeft: '15mm',
-            marginRight: '15mm',
-        }).pipe(res);
-    } catch (error) {
-        
-    }
+    return str.trim();
 }

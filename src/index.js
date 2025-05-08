@@ -76,6 +76,7 @@ import rombelAnggotaRoutes from './routes/rombel_anggota.route.js'
 import KurikulumRoutes from './routes/kurikulum.route.js'
 import * as path from "node:path";
 import ktiRoutes from "./routes/kti.route.js";
+import masterKategoriRoutes from './routes/master_kategori.route.js';
 
 app.use('/auth', authRoutes);
 app.use('/tahun-ajarans', tahunAjaranRoutes)
@@ -88,6 +89,7 @@ app.use('/semesters', semesterRoutes);
 app.use('/rombel-anggotas', rombelAnggotaRoutes);
 app.use('/kti', ktiRoutes)
 app.use('/kurikulum',KurikulumRoutes)
+app.use('/master-kategori', masterKategoriRoutes)
 // Error handling
 app.use(errorHandler);
 

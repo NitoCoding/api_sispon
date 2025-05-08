@@ -152,6 +152,7 @@ model data_absensi {
   created_at          DateTime?             @default(now()) @db.Timestamp(0)
   data_kelas          data_kelas            @relation(fields: [id_kelas], references: [id], onUpdate: Restrict, map: "data_absensi_ibfk_1")
   data_absensi_detail data_absensi_detail[]
+  data_kkm_detail     data_kkm_detail[]
 
   @@index([id_kelas], map: "id_kelas")
 }
@@ -466,12 +467,6 @@ model data_tunjangan_pegawai {
   status        data_tunjangan_pegawai_status?
 }
 
-model data_wali_kelas {
-  id       Int  @id
-  id_gp    Int?
-  id_kelas Int?
-}
-
 model guru_pegawai {
   id                Int       @id @default(autoincrement())
   nip               String    @unique(map: "guru_pegawai_unique") @db.VarChar(35)
@@ -491,6 +486,7 @@ model guru_pegawai {
   unit              String?   @db.VarChar(100)
   alamat            String?   @db.VarChar(100)
   telepon           String?   @db.VarChar(100)
+  foto_ttd          String?   @db.VarChar(100)
 }
 
 model jabatan {
@@ -536,10 +532,11 @@ model ref_jenis_potongan {
 }
 
 model ref_jenis_tunjangan {
-  id           Int      @id @default(autoincrement())
-  nama         String?  @db.VarChar(100)
-  deskripsi    String?  @db.VarChar(100)
+  id           Int                           @id @default(autoincrement())
+  nama         String?                       @db.VarChar(100)
+  deskripsi    String?                       @db.VarChar(100)
   status_tetap Boolean?
+  kategori     ref_jenis_tunjangan_kategori?
 }
 
 model ref_karakter_kategori {
@@ -591,9 +588,27 @@ model ref_kriteria_karakter {
   @@index([id_kategori], map: "id_kategori")
 }
 
+model ref_master_kategori {
+  id        Int                  @id @default(autoincrement())
+  nama      String               @db.VarChar(100)
+  deskripsi String?              @db.Text
+  tipe      tipe_master_kategori
+  ref_mapel ref_mapel[]
+}
+
+enum tipe_master_kategori {
+  ekskul
+  mapel
+  jenis_tunjangan
+  jenis_keuangan
+}
+
 model ref_kurikulum {
-  id   Int     @id @default(autoincrement())
-  nama String? @db.VarChar(100)
+  id              Int               @id @default(autoincrement())
+  nama            String?           @db.VarChar(100)
+  visi            String?           @db.Text
+  misi            String?           @db.Text
+  data_kkm_detail data_kkm_detail[]
 }
 
 model ref_lokasi {
@@ -603,14 +618,16 @@ model ref_lokasi {
 }
 
 model ref_mapel {
-  id           Int     @id @default(autoincrement())
-  kode         String  @db.VarChar(10)
-  nama         String? @db.VarChar(100)
-  kkm_1        Int?
-  kkm_2        Int?
-  kkm_3        Int?
-  keterangan   String? @db.VarChar(100)
-  id_kurikulum Int?
+  id                  Int                 @id @default(autoincrement())
+  kode                String              @db.VarChar(10)
+  nama                String?             @db.VarChar(100)
+  kkm_1               Int?
+  kkm_2               Int?
+  kkm_3               Int?
+  keterangan          String?             @db.VarChar(100)
+  id_kurikulum        Int?
+  id_master_kategori  Int
+  ref_master_kategori ref_master_kategori @relation(fields: [id_master_kategori], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "ref_mapel_ibfk_1")
 
   @@unique([kode, keterangan], map: "ref_mapel_kode_IDX")
 }
@@ -650,19 +667,71 @@ model users {
   password              String?                 @db.VarChar(255)
   role_id               Int
   refresh_token         refresh_token[]
-  roles                 roles?                  @relation(fields: [role_id], references: [id])
   temporary_permissions temporary_permissions[]
+  roles                 roles                   @relation(fields: [role_id], references: [id])
+
+  @@index([role_id], map: "users_role_id_fkey")
 }
 
-model data_kompetensi {
-  id              Int                      @id @default(autoincrement())
-  kode_kompetensi String                   @db.VarChar(10)
-  id_kurikulum    Int?
-  id_mapel        String?                  @db.VarChar(5)
-  fase            String?                  @db.VarChar(5)
-  tingkat         data_kompetensi_tingkat?
-  konten          String?                  @db.Text
-  created_by      Int
+model data_kkm_detail {
+  id            Int            @id @default(autoincrement())
+  kurikulum_id  Int?
+  grade         Int?
+  mapel_id      Int?
+  kkm           Int?
+  tahun_ajaran  String?        @db.VarChar(9)
+  data_absensi  data_absensi?  @relation(fields: [mapel_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "data_kkm_detail_data_absensi_FK")
+  ref_kurikulum ref_kurikulum? @relation(fields: [kurikulum_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "data_kkm_detail_ref_kurikulum_FK")
+
+  @@index([mapel_id], map: "data_kkm_detail_data_absensi_FK")
+  @@index([kurikulum_id], map: "data_kkm_detail_ref_kurikulum_FK")
+}
+
+model data_prestasi_pelanggaran {
+  id               Int                       @id @default(autoincrement())
+  id_santri        Int
+  perihal          perihal
+  judul            String                    @db.VarChar(100)
+  capaian          String?                   @db.VarChar(100)
+  tanggal          DateTime                  @default(now()) @db.Timestamp(0)
+  tempat           String                    @db.VarChar(100)
+  deskripsi        String                    @db.Text
+  bukti            String                    @db.Text
+  resolusi         String?                   @db.Text
+  tipe_pelanggaran tipe_prestasi_pelanggaran
+}
+
+enum perihal {
+  prestasi
+  pelanggaran
+}
+
+enum tipe_prestasi_pelanggaran {
+  Sekolah
+  Asrama
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model data_kompetensi_dasar {
+  id           Int?
+  id_kurikulum Int?
+  id_mapel     Int?
+  grade        Int?
+  id_ki        Int?
+  kode_kd      String?  @db.VarChar(10)
+  deskripsi    String?  @db.Text
+  created_by   DateTime @default(now()) @db.Timestamp(0)
+
+  @@ignore
+}
+
+model data_kompetensi_inti {
+  id           Int                           @id @default(autoincrement())
+  id_kurikulum Int?
+  grade        Int?
+  kode_ki      data_kompetensi_inti_kode_ki?
+  deskripsi    String?                       @db.Text
+  created_by   DateTime                      @default(now()) @db.Timestamp(0)
 }
 
 view data_kti_view {
@@ -852,12 +921,17 @@ enum santri_status_enum {
   Pindah
 }
 
-enum data_kompetensi_tingkat {
-  inti
-  dasar
-  capaian
-  tujuan
-  EMPTY_ENUM_VALUE @map("")
+enum data_kompetensi_inti_kode_ki {
+  KI_1 @map("KI-1")
+  KI_2 @map("KI-2")
+  KI_3 @map("KI-3")
+  KI_4 @map("KI-4")
+}
+
+enum ref_jenis_tunjangan_kategori {
+  pendidikan
+  tunjangan
+  jabatan
 }
 
 enum data_kelas_view_status {

@@ -70,6 +70,7 @@ export class KtiController {
                         nim: santri.nis,
                         nama: santri.nama,
                         kelas: rombel.nama,
+                        kti_id: kti.id || null,
                         judul: kti.judul || null,
                         nilai: kti.nilai || null,
                     };
@@ -99,15 +100,68 @@ export class KtiController {
             next(error);
         }
     };
-    
+
     static getKtiById = async (req, res, next) => {
         try {
             const { id } = req.params;
+
+            // Ambil data KTI berdasarkan ID
             const kti = await prisma.data_nilai_kti.findUnique({
                 where: { id: parseInt(id) }
             });
+
             if (!kti) return res.status(404).json({ message: "KTI data not found" });
-            res.status(200).json(kti);
+
+            // Ambil data santri yang diklik
+            const santri_clicked = await prisma.santri.findUnique({
+                where: { id: parseInt(kti.id_santri) },
+                select: { id: true, nama: true },
+            });
+
+            // Ambil semua KTI dengan judul yang sama
+            const kti_team = await prisma.data_nilai_kti.findMany({
+                where: {
+                    judul: kti.judul,
+                    id: { not: parseInt(id) } // Kecualikan KTI yang sedang dilihat
+                },
+                select: {
+                    id: true,
+                    id_santri: true,
+                    nilai: true
+                }
+            });
+
+            // Ambil data santri untuk setiap anggota tim
+            const santri_team = await Promise.all(
+                kti_team.map(async (member) => {
+                    const santri = await prisma.santri.findUnique({
+                        where: { id: parseInt(member.id_santri) },
+                        select: { id: true, nama: true }
+                    });
+                    return {
+                        id: member.id,
+                        santri_id: member.id_santri,
+                        nama: santri.nama,
+                        nilai: member.nilai
+                    };
+                })
+            );
+
+            // Susun response data
+            const data = {
+                santri: {
+                    id: santri_clicked.id,
+                    nama: santri_clicked.nama
+                },
+                kti: {
+                    id: kti.id,
+                    judul: kti.judul,
+                    nilai: kti.nilai
+                },
+                team: santri_team
+            };
+
+            res.status(200).json(data);
         } catch (error) {
             next(error);
         }
@@ -267,10 +321,7 @@ export class KtiController {
             }
 
             // Kirim respons sukses
-            res.status(200).json({
-                message: `Successfully processed ${updatedData.length} KTI data`,
-                data: updatedData
-            });
+            res.status(200).json(updatedData);
         } catch (error) {
             console.error("Error processing KTI:", error);
             next(error);

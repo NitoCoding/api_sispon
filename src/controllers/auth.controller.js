@@ -4,18 +4,17 @@ import { encrypt, decrypt } from '../helpers.js';
 import { prisma } from '../prisma.js';
 
 export const login = async (req, res, next) => {
-  const { pegId, password } = req.body;
-  const semester = await prisma.ref_semester.findFirst({
-    where: {
-      status: 'aktif'
-    }
-  })
-  console.log(semester);
-  if (!pegId || !password) {
-    return res.status(400).json({ message: "Missing required fields" });
-  }
-
   try {
+    const { pegId, password } = req.body;
+    const semester = await prisma.ref_semester.findFirst({
+      where: {
+        status: 'aktif'
+      }
+    })
+
+    if (!pegId || !password) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
     // Cari semua user yang terkait dengan userId (pegawai)
     const users = await prisma.users.findMany({ 
       where: { kode_pegawai: pegId } 

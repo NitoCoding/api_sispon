@@ -59,10 +59,10 @@ export class DataKelasController {
 
       const kelas = await prisma.data_kelas.findUnique({
         where: { id: parseInt(id) },
-        include: {
-          data_absensi: true,
-          data_rencana_penilaian: true
-        }
+        // include: {
+          // data_absensi: true,
+          // data_rencana_penilaian: true
+        // }
       });
 
       if (!kelas) {

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { config } from './config/index.js';
 import { AppError } from './middleware/errorHandler.js';
-import QRCode from 'qrcode';
+import ejs from 'ejs';
 import wkhtmltopdf from 'wkhtmltopdf';
 
 const algorithm = 'aes-256-cbc';
@@ -52,46 +52,30 @@ export const decrypt = (encryptedText) => {
     }
 };
 
-const generateQRCode = async (imagePath) => {
+export const printPdf = async (res, data, templatePath, orientation = 'Portrait', filename = 'document.pdf') => {
     try {
-        // Baca file gambar sebagai base64
-        const imageBuffer = await fs.readFile(imagePath);
-        const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+        // Render EJS template with provided data
+        const html = await ejs.renderFile(templatePath, { data });
 
-        // Generate QR code dari data base64 gambar
-        const qrDataURL = await QRCode.toDataURL(base64Image);
-
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(`<img src="${qrDataURL}" alt="QR Code TTD" />`);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Error generating QR code');
-    }
-}
-
-const htmlToPdf = async (templateReportName) => {
-
-    const templatePath = path.join(__dirname, 'views', 'templateReportName.ejs');
-    
-    try {
-        // Render HTML dari EJS template
-        const html = await ejs.renderFile(templatePath, { users });
-
-        // Set header untuk download sebagai PDF
+        // Set response headers for PDF
         res.header('Content-Type', 'application/pdf');
-        res.header('Content-Disposition', 'attachment; filename=Laporan_Pengguna.pdf');
+        res.header('Content-Disposition', `attachment; filename=${filename}`);
 
-        // Konversi HTML ke PDF menggunakan wkhtmltopdf
-        wkhtmltopdf(html, {
-            output: null, // Output sebagai stream
-            pageSize: 'A4',
-            orientation: 'Portrait',
-            marginTop: '20mm',
+        // Configure wkhtmltopdf options
+        const pdfOptions = {
+            output: null, // Stream output
+            pageSize: 'Folio',
+            orientation: orientation,
+            marginTop: '10mm',
             marginBottom: '20mm',
             marginLeft: '15mm',
             marginRight: '15mm',
-        }).pipe(res);
+        };
+
+        // Generate and stream PDF
+        wkhtmltopdf(html, pdfOptions).pipe(res);
     } catch (error) {
-        
+        console.error('Error generating PDF:', error);
+        res.status(500).send(`Error generating PDF: ${error.message}`);
     }
-}
+};

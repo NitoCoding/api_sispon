@@ -22,6 +22,12 @@ const storage = diskStorage({
             folderName = 'foto_guru_pegawai';
         } else if (urlParts.includes('santris')) {
             folderName = 'foto_santri';
+        } else if (urlParts.includes('prestasi-pelanggarans')) {
+            if (JSON.parse(req.body.data).perihal === "prestasi") {
+                folderName = '/bukti-prpl/prestasi';
+            } else if (JSON.parse(req.body.data).perihal === "pelanggaran") {
+                folderName = '/bukti-prpl/pelanggaran';
+            }
         }
         const destPath = join(baseDir, folderName);
 
@@ -39,7 +45,6 @@ const storage = diskStorage({
         try {
             // Parse req.body.data safely
             const data = req.body.data ? JSON.parse(req.body.data) : {};
-
             const urlParts = req.baseUrl.split('/').filter(part => part.length > 0);
 
             if (urlParts.includes('santri') || urlParts.includes('santris')) {
@@ -52,6 +57,10 @@ const storage = diskStorage({
                     : file.originalname.split('.')[0].toLowerCase().replace(/\s+/g, '-');
             } else if (urlParts.includes('mass-input')) {
                 name = "data-massal";
+            } else if (urlParts.includes('prestasi-pelanggarans')) {
+                name = data.id_santri
+                    ? data.id_santri
+                    : file.originalname.split('.')[0].toLowerCase().replace(/\s+/g, '-');
             }
         } catch (err) {
             console.error(`Error parsing request body data: ${err.message}`);

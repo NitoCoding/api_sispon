@@ -8,6 +8,7 @@ import {authenticate, checkPermission} from '../middleware/auth.middleware.js';
 // router.use(authenticate);
 
 router.get('/', authenticate, checkPermission("KTI-VIEW"), KtiController.getAllKti);
+router.get('/:id', authenticate, checkPermission("KTI-VIEW"), KtiController.getKtiById);
 router.post('/', authenticate, checkPermission("KTI-CREATE"), KtiController.batchCreateKti);
 router.put('/', authenticate, checkPermission("KTI-UPDATE"), KtiController.updateKti);
 router.delete('/:id', authenticate, checkPermission("KTI-DELETE"), KtiController.deleteKti);

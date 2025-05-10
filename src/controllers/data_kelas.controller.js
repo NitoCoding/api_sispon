@@ -11,6 +11,8 @@ export class DataKelasController {
           id_semester,
           id_mapel,
           nama,
+          gender,
+          tipe,
           status: 'aktif'
         }
       });
@@ -34,7 +36,6 @@ export class DataKelasController {
       })
       const kelas = await prisma.data_kelas.findMany({
         where: {
-          id_semester: parseInt(semester),
           id_semester: parseInt(semester),
         },
         include: {
@@ -83,7 +84,16 @@ export class DataKelasController {
   static updateDataKelas = async (req, res, next) => {
     try {
       const { id } = req.params;
-      const { id_semester, id_mapel, nama, status } = req.body;
+      const { id_semester, id_mapel, gender,tipe,kode_kelas, status } = req.body;
+
+      const semesterNama = await prisma.ref_semester.findUnique({
+        where: { id: parseInt(id_semester) }
+      });
+      const mapelNama = await prisma.ref_mapel.findUnique({
+        where: { id: parseInt(id_mapel) }
+      });
+
+      const nama = `${mapelNama.nama} ${semesterNama.nama} ${kode_kelas} ${tipe} ${gender}`
 
       const kelas = await prisma.data_kelas.update({
         where: { id: parseInt(id) },
@@ -91,7 +101,10 @@ export class DataKelasController {
           id_semester,
           id_mapel,
           nama,
-          status
+          status,
+          tipe,
+          gender,
+          kode_kelas
         }
       });
 

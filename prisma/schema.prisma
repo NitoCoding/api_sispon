@@ -172,14 +172,6 @@ model data_absensi_detail {
   @@index([id_status], map: "id_status")
 }
 
-model data_adab_asrama {
-  id Int @id
-}
-
-model data_adab_sekolah {
-  id Int @id @default(autoincrement())
-}
-
 model data_beasiswa {
   id                  Int                   @id @default(autoincrement())
   id_santri           Int?
@@ -219,10 +211,6 @@ model data_eskul {
   id_mapel   Int?
   tgl_masuk  DateTime? @db.Date
   tgl_keluar DateTime? @db.Date
-}
-
-model data_ibadah_asrama {
-  id Int @id
 }
 
 model data_kehadiran_pegawai {

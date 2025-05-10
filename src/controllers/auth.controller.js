@@ -102,15 +102,3 @@ export const chooseSemester = async (req, res, next) => {
     next(error);
   }
 }
-
-export const logout = async (req, res, next) => {
-  try {
-    // TODO: Add token blacklisting logic here
-    res.status(200).json({
-      status: 'success',
-      message: 'Successfully logged out'
-    });
-  } catch (error) {
-    next(error);
-  }
-};

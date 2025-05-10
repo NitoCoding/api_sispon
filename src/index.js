@@ -9,7 +9,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { logger } from './config/logger.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-
+import { prisma } from './prisma.js';
 const app = express();
 
 // Security Middleware
@@ -32,9 +32,32 @@ app.use(express.json({ limit: '10kb' })); // Body limit is 10kb
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+  // check connections to database, cache, etc.
+  // For now, just return a simple response
+  // In a real-world scenario, you would check the health of your services here
+  // e.g., database connection, external API, etc.
+  // Example: Check database connection
+  const dbConnection = await checkDatabaseConnection();
+  if (!dbConnection) {
+    return res.status(500).json({ status: 'error', message: 'Database connection failed' });
+
+  }
+  // Example: Check cache connection
   res.status(200).json({ status: 'ok' });
 });
+
+const checkDatabaseConnection = async () => {
+  try {
+    // Simulate a database connection check
+    // Replace this with your actual database connection logic
+    const dbConnection = await prisma.$connect();
+    return true; // Connection successful
+  } catch (error) {
+    logger.error('Database connection failed:', error);
+    return false; // Connection failed
+  }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -51,6 +74,7 @@ import tahunAjaranRoutes from './routes/tahun_ajaran.route.js'
 import kelasRoutes from './routes/kelas.route.js'
 import semesterRoutes from './routes/semester.route.js'
 import rombelAnggotaRoutes from './routes/rombel_anggota.route.js'
+import KurikulumRoutes from './routes/kurikulum.route.js'
 import * as path from "node:path";
 import ktiRoutes from "./routes/kti.route.js";
 import ekskulSantriRoutes from "./routes/ekskul_santri.route.js";

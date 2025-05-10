@@ -39,6 +39,7 @@ app.get('/health', (req, res) => {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+app.use('/images', express.static(path.join(__dirname, '../public/pdf_template/images')));
 
 // API Routes
 import userRoutes from './routes/user.route.js';

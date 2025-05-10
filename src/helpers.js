@@ -1,6 +1,8 @@
 import crypto from 'crypto';
 import { config } from './config/index.js';
 import { AppError } from './middleware/errorHandler.js';
+import ejs from 'ejs';
+import wkhtmltopdf from 'wkhtmltopdf';
 
 const algorithm = 'aes-256-cbc';
 const secret = config.secretKey;
@@ -47,5 +49,33 @@ export const decrypt = (encryptedText) => {
             throw error;
         }
         throw new AppError('Decryption failed: ' + error.message, 500);
+    }
+};
+
+export const printPdf = async (res, data, templatePath, orientation = 'Portrait', filename = 'document.pdf') => {
+    try {
+        // Render EJS template with provided data
+        const html = await ejs.renderFile(templatePath, { data });
+
+        // Set response headers for PDF
+        res.header('Content-Type', 'application/pdf');
+        res.header('Content-Disposition', `attachment; filename=${filename}`);
+
+        // Configure wkhtmltopdf options
+        const pdfOptions = {
+            output: null, // Stream output
+            pageSize: 'Folio',
+            orientation: orientation,
+            marginTop: '10mm',
+            marginBottom: '20mm',
+            marginLeft: '15mm',
+            marginRight: '15mm',
+        };
+
+        // Generate and stream PDF
+        wkhtmltopdf(html, pdfOptions).pipe(res);
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        res.status(500).send(`Error generating PDF: ${error.message}`);
     }
 };

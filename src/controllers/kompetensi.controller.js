@@ -3,7 +3,7 @@ import { prisma } from '../prisma.js';
 export class KompetensiController {
   static createKompetensiInti = async (req, res) => {
     try {
-      const { kode_ki, id_kurikulum, id_mapel, grade, deskripsi} = req.body;
+      const { kode_ki, id_kurikulum, grade, deskripsi} = req.body;
       const { created_by } = req.user;
 
       // Validate required fields

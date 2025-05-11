@@ -52,30 +52,12 @@ export const decrypt = (encryptedText) => {
     }
 };
 
-export const printPdf = async (res, data, templatePath, orientation = 'Portrait', filename = 'document.pdf') => {
-    try {
-        // Render EJS template with provided data
-        const html = await ejs.renderFile(templatePath, { data });
 
-        // Set response headers for PDF
-        res.header('Content-Type', 'application/pdf');
-        res.header('Content-Disposition', `attachment; filename=${filename}`);
 
-        // Configure wkhtmltopdf options
-        const pdfOptions = {
-            output: null, // Stream output
-            pageSize: 'Folio',
-            orientation: orientation,
-            marginTop: '10mm',
-            marginBottom: '20mm',
-            marginLeft: '15mm',
-            marginRight: '15mm',
-        };
 
-        // Generate and stream PDF
-        wkhtmltopdf(html, pdfOptions).pipe(res);
-    } catch (error) {
-        console.error('Error generating PDF:', error);
-        res.status(500).send(`Error generating PDF: ${error.message}`);
+export const trimmedString = (str) => {
+    if (typeof str !== 'string') {
+        throw new AppError('Input must be a string', 400);
     }
-};
+    return str.trim();
+}

@@ -18,6 +18,8 @@ export const authenticate = async (req, res, next) => {
       req.user = await prisma.users.findUnique({
         where: {id: payload.userId},
       });
+      // console.log(payload)
+      req.payload = payload;
     } catch (err) {
       console.log(err.message);
       if (err.message === "Token has expired") {

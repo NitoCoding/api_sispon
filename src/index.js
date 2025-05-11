@@ -77,9 +77,13 @@ import rombelAnggotaRoutes from './routes/rombel_anggota.route.js'
 import KurikulumRoutes from './routes/kurikulum.route.js'
 import * as path from "node:path";
 import ktiRoutes from "./routes/kti.route.js";
+
+import masterKategoriRoutes from './routes/master_kategori.route.js';
+
 import ekskulSantriRoutes from "./routes/ekskul_santri.route.js";
 import ekskulRoute from "./routes/ekskul.route.js";
 import prestasiPelanggaranRoute from "./routes/prestasi_pelanggaran.route.js";
+
 
 app.use('/auth', authRoutes);
 app.use('/tahun-ajarans', tahunAjaranRoutes)
@@ -90,11 +94,15 @@ app.use('/rombels', rombelRoutes);
 app.use('/kelas', kelasRoutes);
 app.use('/semesters', semesterRoutes);
 app.use('/rombel-anggotas', rombelAnggotaRoutes);
+
+app.use('/kti', ktiRoutes)
+app.use('/kurikulum',KurikulumRoutes)
+app.use('/master-kategori', masterKategoriRoutes)
+
 app.use('/kti', ktiRoutes);
 app.use('/ekskul-santris', ekskulSantriRoutes);
 app.use('/ekskuls', ekskulRoute);
 app.use('/prestasi-pelanggarans', prestasiPelanggaranRoute);
-
 // Error handling
 app.use(errorHandler);
 

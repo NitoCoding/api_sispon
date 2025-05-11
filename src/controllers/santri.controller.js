@@ -7,6 +7,11 @@ import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import exceljs from 'exceljs';
+import { printPdf } from '../helpers.js';
+import path from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const createSantri = async (req, res, next) => {
     try {
@@ -1169,309 +1174,561 @@ export const deleteSantri = async (req, res, next) => {
     }
 };
 
-export const migrateSantri = async (req, res, next) => {
+export const printSantriList = async (req, res, next) => {
     try {
-        // Konfigurasi koneksi ke database lama
-        const connection = await mysql.createConnection({
-            host: process.env.OLD_DB_HOST,
-            user: process.env.OLD_DB_USER,
-            password: process.env.OLD_DB_PASSWORD,
-            database: process.env.OLD_DB_NAME,
+        // Extract query parameters
+        const { class: className } = req.query;
+        // const token = req.headers.authorization?.split(" ")[1];
+        //
+        // // Validate token
+        // if (!token) {
+        //     return res.status(401).json({ message: "Unauthorized" });
+        // }
+
+        // const decoded = JWTService.decodeToken(token);
+        // const semester = await prisma.ref_semester.findFirst({
+        //     where: { id: parseInt(decoded.semester) },
+        // });
+
+        const semester = await prisma.ref_semester.findFirst({
+            where: {
+                status: 'aktif'
+            }
+        })
+
+        if (!semester) {
+            return res.status(400).json({ message: "Invalid token: Missing semester" });
+        }
+
+        // Fetch academic year
+        const tahunAjaran = await prisma.ref_tahun_ajaran.findFirst({
+            where: { id: semester.id_tahun_ajaran },
         });
 
-        // Ambil semua data dari tabel lama
-        const [rows] = await connection.execute('SELECT * FROM tb_santri');
+        if (!tahunAjaran) {
+            return res.status(404).json({ message: "Academic year not found" });
+        }
 
-        // Tutup koneksi ke database lama
-        await connection.end();
+        // Build where clause for rombel query
+        const whereClause = { id_tahun_ajaran: tahunAjaran.id };
+        if (className) {
+            whereClause["nama"] = className;
+        }
 
-        // Mapping nama bulan ke angka
-        const bulanToNumber = {
-            Januari: '01',
-            Februari: '02',
-            Maret: '03',
-            April: '04',
-            Mei: '05',
-            Juni: '06',
-            Juli: '07',
-            Agustus: '08',
-            September: '09',
-            Oktober: '10',
-            November: '11',
-            Desember: '12',
-        };
+        // Fetch rombel data with members
+        const rombels = await prisma.data_rombel.findMany({
+            where: whereClause,
+            include: {
+                data_rombel_anggota: {
+                    select: { id_santri: true },
+                },
+            },
+        });
 
-        // Mapping status
-        const statusMapping = {
-            l: 'Alumni',
-            d: 'Tidak_Aktif',
-            a: 'Aktif',
-            p: 'Pindah',
-        };
+        let santriData = [];
 
-        // Transaksi untuk memastikan semua data dimasukkan secara atomik
-        // await prisma.$transaction(async (prisma) => {
-        //
-        // }, { timeout: 360000000 });
-        for (const row of rows) {
-            const {
-                id_santri,
-                nis_nasional,
-                nis,
-                nama,
-                kelas_st,
-                foto_st,
-                jkl,
-                tempat_lahir,
-                tgl_lahir,
-                bln_lahir,
-                tahun_lahir,
-                agama,
-                kesukuan,
-                anak_ke,
-                berat,
-                tinggi,
-                g_darah,
-                warna_kulit,
-                hoby,
-                penyakit,
-                telpon,
-                alamat,
-                kota,
-                propinsi,
-                pos,
-                email,
-                asal_sekolah,
-                asl_skl,
-                n_ujian_sd,
-                n_ujian_smp,
-                no_skhun,
-                tahun_shkun,
-                tgl_masuk,
-                bln_masuk,
-                thn_masuk,
-                tgl_keluar,
-                bln_keluar,
-                thn_keluar,
-                pindahan,
-                alasan_pindah,
-                thn_ajaranmsk,
-                ta_tamat,
-                status,
-                lanjut_ke,
-                nama_ort,
-                nama_ibu,
-                nm_wali,
-                alamat_ort,
-                tlp_ayah,
-                tlp_ibu,
-                pekerjaan_ayah,
-                pekerjaan_ibu,
-                pkerja_wali,
-                phasil_ayah,
-                phasil_ibu,
-                mail_ort,
-                suku,
-            } = row;
+        // Process rombel data
+        for (const rombel of rombels) {
+            const anggotaIds = rombel.data_rombel_anggota.map((anggota) => anggota.id_santri);
 
-            // Cek apakah data dengan ID atau NIS yang sama sudah ada
-            let existingSantri = await prisma.santri.findFirst({
-                where: {
-                    id: id_santri,
-                    nis,
+            // Fetch only required santri fields
+            const santriList = await prisma.santri.findMany({
+                where: { id: { in: anggotaIds } },
+                select: {
+                    id: true,
+                    nis: true,
+                    nisn: true,
+                    nama: true,
+                    tempat_ttl: true,
+                    tgl_ttl: true,
                 },
             });
 
-            if (!existingSantri) {
-                // Proses tanggal lahir
-                const tglLahir = tgl_lahir !== '-' && bln_lahir !== '-' && tahun_lahir !== '-'
-                    ? `${tahun_lahir}-${bulanToNumber[bln_lahir]}-${tgl_lahir.padStart(2, '0')}`
-                    : null;
-
-                // Proses tanggal masuk
-                const tglMasuk = tgl_masuk !== '-' && bln_masuk !== '-' && thn_masuk !== '-'
-                    ? `${thn_masuk}-${bulanToNumber[bln_masuk]}-${tgl_masuk.padStart(2, '0')}`
-                    : null;
-
-                // Proses tanggal keluar
-                const tglKeluar = tgl_keluar !== '-' && bln_keluar !== '-' && thn_keluar !== '-'
-                    ? `${thn_keluar}-${bulanToNumber[bln_keluar]}-${tgl_keluar.padStart(2, '0')}`
-                    : null;
-
-                // Normalisasi jenis kelamin
-                let jenisKelamin = jkl ? jkl.toUpperCase() : null;
-                if (jenisKelamin !== 'L' && jenisKelamin !== 'P') {
-                    console.log(`Jenis kelamin tidak valid untuk NIS ${nis}: ${jenisKelamin}. Set ke null.`);
-                    jenisKelamin = null;
-                }
-
-                // Mapping status
-                const statusSantri = statusMapping[status?.toLowerCase()] || null;
-
-                // Buat data santri baru
-                existingSantri = await prisma.santri.create({
-                    data: {
-                        id: id_santri,
-                        nisn: nis_nasional,
-                        nis,
-                        nama,
-                        foto: foto_st,
-                        jk: jenisKelamin,
-                        tempat_ttl: tempat_lahir,
-                        tgl_ttl: tglLahir ? new Date(tglLahir) : null,
-                        agama,
-                        kesukuan,
-                        anak_ke: anak_ke ? parseInt(anak_ke) : null,
-                        tinggi: tinggi ? parseFloat(tinggi) : null,
-                        berat: berat ? parseFloat(berat) : null,
-                        gol_darah: g_darah,
-                        hobi: hoby,
-                        email,
-                        status: statusSantri,
-                        warna_kulit,
-                    },
-                });
-
-                // Tambahkan data ke tabel santri_kesehatan
-                await prisma.santri_kesehatan.create({
-                    data: {
-                        id_santri: existingSantri.id,
-                        riwayat_penyakit: penyakit || null,
-                    },
-                });
-
-                // Tambahkan data ke tabel santri_kontak
-                await prisma.santri_kontak.create({
-                    data: {
-                        id_santri: existingSantri.id,
-                        telepon: telpon || null,
-                        alamat: alamat || null,
-                        provinsi: propinsi || null,
-                        kota: kota || null,
-                        kode_pos: pos || null,
-                    },
-                });
-
-                // Tambahkan data ke tabel santri_pendidikan
-                await prisma.santri_pendidikan.create({
-                    data: {
-                        id_santri: existingSantri.id,
-                        asal_sekolah: asal_sekolah || null,
-                        alamat_sekolah: asl_skl || null,
-                        no_skhun: no_skhun || null,
-                        tahun_skhun: tahun_shkun ? parseInt(tahun_shkun) : null,
-                        nomor_ujian_sd: n_ujian_sd || null,
-                        nomor_ujian_smp: n_ujian_smp || null,
-                    },
-                });
-
-                // Tambahkan data ke tabel santri_status
-                await prisma.santri_status.create({
-                    data: {
-                        id_santri: existingSantri.id,
-                        tahun_ajaran_masuk: thn_ajaranmsk || null,
-                        tahun_ajaran_tamat: ta_tamat || null,
-                        tgl_masuk: tglMasuk ? new Date(tglMasuk) : null,
-                        tgl_keluar: tglKeluar ? new Date(tglKeluar) : null,
-                        pindahan: pindahan === '1' ? true : pindahan === '0' ? false : null,
-                        alasan_pindah: alasan_pindah || null,
-                        lanjut_ke: lanjut_ke || null,
-                    },
-                });
-
-                // Tambahkan data ke tabel santri_keluarga
-                await prisma.santri_keluarga.create({
-                    data: {
-                        id_santri: existingSantri.id,
-                        nama_ayah: nama_ort || null,
-                        nama_ibu: nama_ibu || null,
-                        nama_wali: nm_wali || null,
-                        pendidikan_ayah: null, // Tidak ada kolom di tb_santri
-                        pendidikan_ibu: null,  // Tidak ada kolom di tb_santri
-                        pekerjaan_ayah: pekerjaan_ayah || null,
-                        pekerjaan_ibu: pekerjaan_ibu || null,
-                        pekerjaan_wali: pkerja_wali || null,
-                        suku_marga: suku || null,
-                        alamat: alamat_ort || null,
-                        telepon_ayah: tlp_ayah || null,
-                        telepon_ibu: tlp_ibu || null,
-                        penghasilan_ayah: phasil_ayah || null,
-                        penghasilan_ibu: phasil_ibu || null,
-                        email_ayah: mail_ort || null,
-                    },
-                });
-
-                console.log(`Data dengan NIS ${nis} berhasil ditambahkan ke semua tabel.`);
-            } else {
-                console.log(`Data dengan NIS ${nis} sudah ada. Melanjutkan pengecekan rombel.`);
-            }
-
-            // Proses untuk tabel ref_tahun_ajaran dan data_rombel
-            const tahunAjaran = thn_ajaranmsk?.split('/') || [];
-            const tahunMulai = tahunAjaran[0] ? parseInt(tahunAjaran[0]) : null;
-            const tahunSelesai = tahunAjaran[1] ? parseInt(tahunAjaran[1]) : null;
-
-            if (tahunMulai && tahunSelesai) {
-                let tahunAjaranRecord = await prisma.ref_tahun_ajaran.findFirst({
-                    where: {
-                        tahun_mulai: tahunMulai,
-                        tahun_selesai: tahunSelesai,
-                    },
-                });
-
-                if (!tahunAjaranRecord) {
-                    tahunAjaranRecord = await prisma.ref_tahun_ajaran.create({
-                        data: {
-                            nama: `${tahunMulai}/${tahunSelesai}`,
-                            tahun_mulai: tahunMulai,
-                            tahun_selesai: tahunSelesai,
-                            status: 'aktif',
+            // Fetch related data for each santri
+            const santriWithDetails = await Promise.all(
+                santriList.map(async (santri) => {
+                    const kesehatan = await prisma.santri_kesehatan.findFirst({
+                        where: { id_santri: santri.id },
+                        select: { riwayat_penyakit: true },
+                    });
+                    const kontak = await prisma.santri_kontak.findFirst({
+                        where: { id_santri: santri.id },
+                        select: { alamat: true, telepon: true },
+                    });
+                    const pendidikan = await prisma.santri_pendidikan.findFirst({
+                        where: { id_santri: santri.id },
+                        select: { asal_sekolah: true },
+                    });
+                    const keluarga = await prisma.santri_keluarga.findFirst({
+                        where: { id_santri: santri.id },
+                        select: {
+                            nama_ayah: true,
+                            nama_ibu: true,
+                            pekerjaan_ayah: true,
+                            pekerjaan_ibu: true,
+                            penghasilan_ayah: true,
+                            penghasilan_ibu: true,
+                            telepon_ayah: true,
+                            telepon_ibu: true,
                         },
                     });
-                }
 
-                let rombelRecord = await prisma.data_rombel.findFirst({
-                    where: {
-                        nama: kelas_st,
-                        id_tahun_ajaran: tahunAjaranRecord.id,
-                    },
-                });
+                    return {
+                        nis: santri.nis,
+                        nisn: santri.nisn,
+                        nama: santri.nama,
+                        tempat_ttl: santri.tempat_ttl,
+                        tgl_ttl: santri.tgl_ttl,
+                        alamat: kontak?.alamat || null,
+                        telepon: kontak?.telepon || keluarga?.telepon_ayah || keluarga?.telepon_ibu || null,
+                        asal_sekolah: pendidikan?.asal_sekolah || null,
+                        nama_ayah: keluarga?.nama_ayah || null,
+                        nama_ibu: keluarga?.nama_ibu || null,
+                        pekerjaan_ayah: keluarga?.pekerjaan_ayah || null,
+                        pekerjaan_ibu: keluarga?.pekerjaan_ibu || null,
+                        penghasilan_ayah: keluarga?.penghasilan_ayah || null,
+                        penghasilan_ibu: keluarga?.penghasilan_ibu || null,
+                        riwayat_penyakit: kesehatan?.riwayat_penyakit || null,
+                        kelas: rombel.nama,
+                    };
+                })
+            );
 
-                if (!rombelRecord) {
-                    rombelRecord = await prisma.data_rombel.create({
-                        data: {
-                            nama: kelas_st,
-                            id_tahun_ajaran: tahunAjaranRecord.id,
-                            status: 'aktif',
-                        },
-                    });
-                }
-
-                const existingAnggotaRombel = await prisma.data_rombel_anggota.findFirst({
-                    where: {
-                        id_santri: existingSantri.id,
-                        id_rombel: rombelRecord.id,
-                    },
-                });
-
-                if (!existingAnggotaRombel) {
-                    await prisma.data_rombel_anggota.create({
-                        data: {
-                            id_rombel: rombelRecord.id,
-                            id_santri: existingSantri.id,
-                            status: 'aktif',
-                        },
-                    });
-                    console.log(`Data santri dengan NIS ${nis} ditambahkan ke rombel ${kelas_st}.`);
-                } else {
-                    console.log(`Data santri dengan NIS ${nis} sudah ada di rombel ${kelas_st}.`);
-                }
-            }
+            santriWithDetails.sort((a, b) => a.nama.localeCompare(b.nama));
+            santriData.push({
+                id_rombel: rombel.id,
+                class: rombel.nama,
+                students: santriWithDetails,
+            });
         }
 
-        res.status(200).json({ message: 'Data migrated successfully' });
+        // Fetch santri without a class (no_class)
+        // const allAnggotaIds = new Set();
+        // const allAnggotas = await prisma.data_rombel_anggota.findMany({
+        //     select: { id_santri: true },
+        // });
+        // allAnggotas.forEach((element) => {
+        //     allAnggotaIds.add(element.id_santri);
+        // });
+        // const anggotaIdsArray = Array.from(allAnggotaIds);
+        //
+        // let noClassSantri = [];
+        // const santriNoClassList = await prisma.santri.findMany({
+        //     where: anggotaIdsArray.length > 0 ? { id: { notIn: anggotaIdsArray } } : {},
+        //     select: {
+        //         id: true,
+        //         nis: true,
+        //         nisn: true,
+        //         nama: true,
+        //         tempat_ttl: true,
+        //         tgl_ttl: true,
+        //     },
+        // });
+        //
+        // noClassSantri = await Promise.all(
+        //     santriNoClassList.map(async (santri) => {
+        //         const kesehatan = await prisma.santri_kesehatan.findFirst({
+        //             where: { id_santri: santri.id },
+        //             select: { riwayat_penyakit: true },
+        //         });
+        //         const kontak = await prisma.santri_kontak.findFirst({
+        //             where: { id_santri: santri.id },
+        //             select: { alamat: true, telepon: true },
+        //         });
+        //         const pendidikan = await prisma.santri_pendidikan.findFirst({
+        //             where: { id_santri: santri.id },
+        //             select: { asal_sekolah: true },
+        //         });
+        //         const keluarga = await prisma.santri_keluarga.findFirst({
+        //             where: { id_santri: santri.id },
+        //             select: {
+        //                 nama_ayah: true,
+        //                 nama_ibu: true,
+        //                 pekerjaan_ayah: true,
+        //                 pekerjaan_ibu: true,
+        //                 penghasilan_ayah: true,
+        //                 penghasilan_ibu: true,
+        //                 telepon_ayah: true,
+        //                 telepon_ibu: true,
+        //             },
+        //         });
+        //
+        //         return {
+        //             nis: santri.nis,
+        //             nisn: santri.nisn,
+        //             nama: santri.nama,
+        //             tempat_ttl: santri.tempat_ttl,
+        //             tgl_ttl: santri.tgl_ttl,
+        //             alamat: kontak?.alamat || null,
+        //             telepon: kontak?.telepon || keluarga?.telepon_ayah || keluarga?.telepon_ibu || null,
+        //             asal_sekolah: pendidikan?.asal_sekolah || null,
+        //             nama_ayah: keluarga?.nama_ayah || null,
+        //             nama_ibu: keluarga?.nama_ibu || null,
+        //             pekerjaan_ayah: keluarga?.pekerjaan_ayah || null,
+        //             pekerjaan_ibu: keluarga?.pekerjaan_ibu || null,
+        //             penghasilan_ayah: keluarga?.penghasilan_ayah || null,
+        //             penghasilan_ibu: keluarga?.penghasilan_ibu || null,
+        //             riwayat_penyakit: kesehatan?.riwayat_penyakit || null,
+        //             kelas: "no_class",
+        //         };
+        //     })
+        // );
+        //
+        // noClassSantri.sort((a, b) => a.nama.localeCompare(b.nama));
+        // santriData.push({
+        //     id_rombel: null,
+        //     class: "no_class",
+        //     students: noClassSantri,
+        // });
+        //
+        // Prepare data for PDF
+        let kelas;
+        if (className) {
+            kelas = `KELAS ${className}`;
+        } else {
+            kelas = "";
+        }
+
+        const pdfData = {
+            kelas: kelas,
+            santri: santriData.flatMap((rombel) =>
+                rombel.students.map((s) => ({
+                    nisn: s.nis || s.nisn || "-",
+                    name: s.nama || "-",
+                    birth: `${s.tempat_ttl || "-"}, ${s.tgl_ttl ? new Date(s.tgl_ttl).toLocaleDateString("id-ID") : "-"}`,
+                    address: s.alamat || "-",
+                    school: s.asal_sekolah || "-",
+                    father: s.nama_ayah || "-",
+                    mother: s.nama_ibu || "-",
+                    fatherJob: s.pekerjaan_ayah || "-",
+                    motherJob: s.pekerjaan_ibu || "-",
+                    fatherIncome: s.penghasilan_ayah
+                        ? `Rp ${parseInt(s.penghasilan_ayah.replace(/\D/g, "")).toLocaleString("id-ID")}`
+                        : "-",
+                    motherIncome: s.penghasilan_ibu
+                        ? `Rp ${parseInt(s.penghasilan_ibu.replace(/\D/g, "")).toLocaleString("id-ID")}`
+                        : "-",
+                    phone: s.telepon || "-",
+                    disease: s.riwayat_penyakit || "-",
+                }))
+            ),
+        };
+
+        // Define template path and PDF settings
+        const templatePath = path.join(__dirname, '../../public/pdf_template/daftar_santri.ejs');
+        const orientation = "Landscape";
+        const filename = `Daftar_Nama_Santri_${className || "All"}.pdf`;
+
+        // Generate and stream PDF
+        await printPdf(res, pdfData, templatePath, orientation, filename);
     } catch (error) {
-        console.log(error);
+        console.error("Error generating PDF:", error);
         next(error);
     }
 };
+
+// export const migrateSantri = async (req, res, next) => {
+//     try {
+//         // Konfigurasi koneksi ke database lama
+//         const connection = await mysql.createConnection({
+//             host: process.env.OLD_DB_HOST,
+//             user: process.env.OLD_DB_USER,
+//             password: process.env.OLD_DB_PASSWORD,
+//             database: process.env.OLD_DB_NAME,
+//         });
+//
+//         // Ambil semua data dari tabel lama
+//         const [rows] = await connection.execute('SELECT * FROM tb_santri');
+//
+//         // Tutup koneksi ke database lama
+//         await connection.end();
+//
+//         // Mapping nama bulan ke angka
+//         const bulanToNumber = {
+//             Januari: '01',
+//             Februari: '02',
+//             Maret: '03',
+//             April: '04',
+//             Mei: '05',
+//             Juni: '06',
+//             Juli: '07',
+//             Agustus: '08',
+//             September: '09',
+//             Oktober: '10',
+//             November: '11',
+//             Desember: '12',
+//         };
+//
+//         // Mapping status
+//         const statusMapping = {
+//             l: 'Alumni',
+//             d: 'Tidak_Aktif',
+//             a: 'Aktif',
+//             p: 'Pindah',
+//         };
+//
+//         // Transaksi untuk memastikan semua data dimasukkan secara atomik
+//         // await prisma.$transaction(async (prisma) => {
+//         //
+//         // }, { timeout: 360000000 });
+//         for (const row of rows) {
+//             const {
+//                 id_santri,
+//                 nis_nasional,
+//                 nis,
+//                 nama,
+//                 kelas_st,
+//                 foto_st,
+//                 jkl,
+//                 tempat_lahir,
+//                 tgl_lahir,
+//                 bln_lahir,
+//                 tahun_lahir,
+//                 agama,
+//                 kesukuan,
+//                 anak_ke,
+//                 berat,
+//                 tinggi,
+//                 g_darah,
+//                 warna_kulit,
+//                 hoby,
+//                 penyakit,
+//                 telpon,
+//                 alamat,
+//                 kota,
+//                 propinsi,
+//                 pos,
+//                 email,
+//                 asal_sekolah,
+//                 asl_skl,
+//                 n_ujian_sd,
+//                 n_ujian_smp,
+//                 no_skhun,
+//                 tahun_shkun,
+//                 tgl_masuk,
+//                 bln_masuk,
+//                 thn_masuk,
+//                 tgl_keluar,
+//                 bln_keluar,
+//                 thn_keluar,
+//                 pindahan,
+//                 alasan_pindah,
+//                 thn_ajaranmsk,
+//                 ta_tamat,
+//                 status,
+//                 lanjut_ke,
+//                 nama_ort,
+//                 nama_ibu,
+//                 nm_wali,
+//                 alamat_ort,
+//                 tlp_ayah,
+//                 tlp_ibu,
+//                 pekerjaan_ayah,
+//                 pekerjaan_ibu,
+//                 pkerja_wali,
+//                 phasil_ayah,
+//                 phasil_ibu,
+//                 mail_ort,
+//                 suku,
+//             } = row;
+//
+//             // Cek apakah data dengan ID atau NIS yang sama sudah ada
+//             let existingSantri = await prisma.santri.findFirst({
+//                 where: {
+//                     id: id_santri,
+//                     nis,
+//                 },
+//             });
+//
+//             if (!existingSantri) {
+//                 // Proses tanggal lahir
+//                 const tglLahir = tgl_lahir !== '-' && bln_lahir !== '-' && tahun_lahir !== '-'
+//                     ? `${tahun_lahir}-${bulanToNumber[bln_lahir]}-${tgl_lahir.padStart(2, '0')}`
+//                     : null;
+//
+//                 // Proses tanggal masuk
+//                 const tglMasuk = tgl_masuk !== '-' && bln_masuk !== '-' && thn_masuk !== '-'
+//                     ? `${thn_masuk}-${bulanToNumber[bln_masuk]}-${tgl_masuk.padStart(2, '0')}`
+//                     : null;
+//
+//                 // Proses tanggal keluar
+//                 const tglKeluar = tgl_keluar !== '-' && bln_keluar !== '-' && thn_keluar !== '-'
+//                     ? `${thn_keluar}-${bulanToNumber[bln_keluar]}-${tgl_keluar.padStart(2, '0')}`
+//                     : null;
+//
+//                 // Normalisasi jenis kelamin
+//                 let jenisKelamin = jkl ? jkl.toUpperCase() : null;
+//                 if (jenisKelamin !== 'L' && jenisKelamin !== 'P') {
+//                     console.log(`Jenis kelamin tidak valid untuk NIS ${nis}: ${jenisKelamin}. Set ke null.`);
+//                     jenisKelamin = null;
+//                 }
+//
+//                 // Mapping status
+//                 const statusSantri = statusMapping[status?.toLowerCase()] || null;
+//
+//                 // Buat data santri baru
+//                 existingSantri = await prisma.santri.create({
+//                     data: {
+//                         id: id_santri,
+//                         nisn: nis_nasional,
+//                         nis,
+//                         nama,
+//                         foto: foto_st,
+//                         jk: jenisKelamin,
+//                         tempat_ttl: tempat_lahir,
+//                         tgl_ttl: tglLahir ? new Date(tglLahir) : null,
+//                         agama,
+//                         kesukuan,
+//                         anak_ke: anak_ke ? parseInt(anak_ke) : null,
+//                         tinggi: tinggi ? parseFloat(tinggi) : null,
+//                         berat: berat ? parseFloat(berat) : null,
+//                         gol_darah: g_darah,
+//                         hobi: hoby,
+//                         email,
+//                         status: statusSantri,
+//                         warna_kulit,
+//                     },
+//                 });
+//
+//                 // Tambahkan data ke tabel santri_kesehatan
+//                 await prisma.santri_kesehatan.create({
+//                     data: {
+//                         id_santri: existingSantri.id,
+//                         riwayat_penyakit: penyakit || null,
+//                     },
+//                 });
+//
+//                 // Tambahkan data ke tabel santri_kontak
+//                 await prisma.santri_kontak.create({
+//                     data: {
+//                         id_santri: existingSantri.id,
+//                         telepon: telpon || null,
+//                         alamat: alamat || null,
+//                         provinsi: propinsi || null,
+//                         kota: kota || null,
+//                         kode_pos: pos || null,
+//                     },
+//                 });
+//
+//                 // Tambahkan data ke tabel santri_pendidikan
+//                 await prisma.santri_pendidikan.create({
+//                     data: {
+//                         id_santri: existingSantri.id,
+//                         asal_sekolah: asal_sekolah || null,
+//                         alamat_sekolah: asl_skl || null,
+//                         no_skhun: no_skhun || null,
+//                         tahun_skhun: tahun_shkun ? parseInt(tahun_shkun) : null,
+//                         nomor_ujian_sd: n_ujian_sd || null,
+//                         nomor_ujian_smp: n_ujian_smp || null,
+//                     },
+//                 });
+//
+//                 // Tambahkan data ke tabel santri_status
+//                 await prisma.santri_status.create({
+//                     data: {
+//                         id_santri: existingSantri.id,
+//                         tahun_ajaran_masuk: thn_ajaranmsk || null,
+//                         tahun_ajaran_tamat: ta_tamat || null,
+//                         tgl_masuk: tglMasuk ? new Date(tglMasuk) : null,
+//                         tgl_keluar: tglKeluar ? new Date(tglKeluar) : null,
+//                         pindahan: pindahan === '1' ? true : pindahan === '0' ? false : null,
+//                         alasan_pindah: alasan_pindah || null,
+//                         lanjut_ke: lanjut_ke || null,
+//                     },
+//                 });
+//
+//                 // Tambahkan data ke tabel santri_keluarga
+//                 await prisma.santri_keluarga.create({
+//                     data: {
+//                         id_santri: existingSantri.id,
+//                         nama_ayah: nama_ort || null,
+//                         nama_ibu: nama_ibu || null,
+//                         nama_wali: nm_wali || null,
+//                         pendidikan_ayah: null, // Tidak ada kolom di tb_santri
+//                         pendidikan_ibu: null,  // Tidak ada kolom di tb_santri
+//                         pekerjaan_ayah: pekerjaan_ayah || null,
+//                         pekerjaan_ibu: pekerjaan_ibu || null,
+//                         pekerjaan_wali: pkerja_wali || null,
+//                         suku_marga: suku || null,
+//                         alamat: alamat_ort || null,
+//                         telepon_ayah: tlp_ayah || null,
+//                         telepon_ibu: tlp_ibu || null,
+//                         penghasilan_ayah: phasil_ayah || null,
+//                         penghasilan_ibu: phasil_ibu || null,
+//                         email_ayah: mail_ort || null,
+//                     },
+//                 });
+//
+//                 console.log(`Data dengan NIS ${nis} berhasil ditambahkan ke semua tabel.`);
+//             } else {
+//                 console.log(`Data dengan NIS ${nis} sudah ada. Melanjutkan pengecekan rombel.`);
+//             }
+//
+//             // Proses untuk tabel ref_tahun_ajaran dan data_rombel
+//             const tahunAjaran = thn_ajaranmsk?.split('/') || [];
+//             const tahunMulai = tahunAjaran[0] ? parseInt(tahunAjaran[0]) : null;
+//             const tahunSelesai = tahunAjaran[1] ? parseInt(tahunAjaran[1]) : null;
+//
+//             if (tahunMulai && tahunSelesai) {
+//                 let tahunAjaranRecord = await prisma.ref_tahun_ajaran.findFirst({
+//                     where: {
+//                         tahun_mulai: tahunMulai,
+//                         tahun_selesai: tahunSelesai,
+//                     },
+//                 });
+//
+//                 if (!tahunAjaranRecord) {
+//                     tahunAjaranRecord = await prisma.ref_tahun_ajaran.create({
+//                         data: {
+//                             nama: `${tahunMulai}/${tahunSelesai}`,
+//                             tahun_mulai: tahunMulai,
+//                             tahun_selesai: tahunSelesai,
+//                             status: 'aktif',
+//                         },
+//                     });
+//                 }
+//
+//                 let rombelRecord = await prisma.data_rombel.findFirst({
+//                     where: {
+//                         nama: kelas_st,
+//                         id_tahun_ajaran: tahunAjaranRecord.id,
+//                     },
+//                 });
+//
+//                 if (!rombelRecord) {
+//                     rombelRecord = await prisma.data_rombel.create({
+//                         data: {
+//                             nama: kelas_st,
+//                             id_tahun_ajaran: tahunAjaranRecord.id,
+//                             status: 'aktif',
+//                         },
+//                     });
+//                 }
+//
+//                 const existingAnggotaRombel = await prisma.data_rombel_anggota.findFirst({
+//                     where: {
+//                         id_santri: existingSantri.id,
+//                         id_rombel: rombelRecord.id,
+//                     },
+//                 });
+//
+//                 if (!existingAnggotaRombel) {
+//                     await prisma.data_rombel_anggota.create({
+//                         data: {
+//                             id_rombel: rombelRecord.id,
+//                             id_santri: existingSantri.id,
+//                             status: 'aktif',
+//                         },
+//                     });
+//                     console.log(`Data santri dengan NIS ${nis} ditambahkan ke rombel ${kelas_st}.`);
+//                 } else {
+//                     console.log(`Data santri dengan NIS ${nis} sudah ada di rombel ${kelas_st}.`);
+//                 }
+//             }
+//         }
+//
+//         res.status(200).json({ message: 'Data migrated successfully' });
+//     } catch (error) {
+//         console.log(error);
+//         next(error);
+//     }

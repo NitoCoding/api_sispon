@@ -63,6 +63,7 @@ model temporary_permissions {
 }
 
 model santri {
+
   id                                Int                      @id @default(autoincrement())
   nisn                              String                   @db.VarChar(100)
   nis                               String                   @db.VarChar(100)
@@ -87,6 +88,7 @@ model santri {
   data_beasiswa_santri              data_beasiswa_santri[]
   data_nilai_eskul                  data_nilai_eskul[]
   data_pembayaran_santri            data_pembayaran_santri[]
+
 }
 
 model santri_kesehatan {
@@ -648,6 +650,7 @@ model ref_kriteria_karakter {
 }
 
 model ref_master_kategori {
+
   id        Int                  @id @default(autoincrement())
   nama      String               @db.VarChar(100)
   deskripsi String?              @db.Text
@@ -661,6 +664,7 @@ model ref_master_kategori {
   ref_tahun_ajaran       ref_tahun_ajaran[]       @relation(map: "ref_tahun_ajaran_ibfk_1")
   data_beasiswa_santri   data_beasiswa_santri[]   @relation(map: "data_beasiswa_santri_ref_master_kategori_FK")
 
+
   santri santri[] @relation(map: "santri_ibfk_1")
 }
 
@@ -672,7 +676,9 @@ enum tipe_master_kategori {
   jenis_penilaian
   status_santri
   status_ref_semester
+
   beasiswa
+
 }
 
 model ref_kurikulum {
@@ -698,15 +704,19 @@ model ref_mapel {
   nama                          String?              @db.VarChar(100)
   nama_arab                     String?              @db.VarChar(100)
   sifat                         String?              @db.VarChar(100)
+
   // kkm_1                         Int?
   // kkm_2                         Int?
   // kkm_3                         Int?
+
   keterangan                    String?              @db.VarChar(100)
   id_kurikulum                  Int?
   id_master_kategori_ref_mapel  Int?
   ref_master_kategori_ref_mapel ref_master_kategori? @relation(fields: [id_master_kategori_ref_mapel], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "ref_mapel_ibfk_1")
+
   data_nilai_eskul              data_nilai_eskul[]
   data_kompetensi_dasar          data_kompetensi_dasar[]
+
 
   @@unique([kode, keterangan], map: "ref_mapel_kode_IDX")
 }
@@ -719,7 +729,9 @@ model ref_semester {
   id_master_kategori_status_ref_semester  Int?
   ref_tahun_ajaran                        ref_tahun_ajaran?    @relation(fields: [id_tahun_ajaran], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "ref_semester_ibfk_1")
   ref_master_kategori_status_ref_semester ref_master_kategori? @relation(fields: [id_master_kategori_status_ref_semester], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "ref_semester_ibfk_2")
+
   data_nilai_eskul                        data_nilai_eskul[]
+
 
   @@index([id_tahun_ajaran], map: "id_tahun_ajaran")
 }
@@ -740,7 +752,9 @@ model ref_tahun_ajaran {
   created_at                                  DateTime?                @default(now()) @db.Timestamp(0)
   data_konfigurasi_biaya                      data_konfigurasi_biaya[]
   ref_semester                                ref_semester[]
+
   data_nilai_eskul                            data_nilai_eskul[]
+
   ref_master_kategori_status_ref_tahun_ajaran ref_master_kategori?     @relation(fields: [id_master_kategori_status_ref_tahun_ajaran], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "ref_tahun_ajaran_ibfk_1")
 }
 
@@ -800,6 +814,7 @@ model data_kompetensi_dasar {
   deskripsi    String?  @db.Text
   created_by   DateTime @default(now()) @db.Timestamp(0)
 
+
   kurikulum ref_kurikulum? @relation(fields: [id_kurikulum], references: [id], onDelete: Restrict, onUpdate: Restrict)
   mapel     ref_mapel?     @relation(fields: [id_mapel], references: [id], onDelete: Restrict, onUpdate: Restrict)
   kompetensi_inti data_kompetensi_inti? @relation(fields: [id_ki], references: [id], onDelete: Restrict, onUpdate: Restrict)
@@ -816,6 +831,7 @@ model data_kompetensi_inti {
 
   kurikulum ref_kurikulum? @relation(fields: [id_kurikulum], references: [id], onDelete: Restrict, onUpdate: Restrict)
   kompetensi_dasar data_kompetensi_dasar[]
+
 }
 
 enum data_detail_penggajian_jenis_komponen {

@@ -1,3 +1,4 @@
+
 import { AppError } from "../middleware/errorHandler.js";
 import { JWTService } from "../services/jwt.service.js";
 import { encrypt, decrypt } from "../helpers.js";
@@ -222,4 +223,5 @@ export class AuthController {
 			next(error);
 		}
 	};
+
 }

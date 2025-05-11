@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { config } from './config/index.js';
 import { AppError } from './middleware/errorHandler.js';
-import QRCode from 'qrcode';
+import ejs from 'ejs';
 import wkhtmltopdf from 'wkhtmltopdf';
 
 const algorithm = 'aes-256-cbc';

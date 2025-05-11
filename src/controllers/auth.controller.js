@@ -23,13 +23,13 @@ export class AuthController {
 				return res.status(401).json({ message: "Invalid token" });
 			}
 
-      console.log("decodedToken", decodedToken);
+    //   console.log("decodedToken", decodedToken);
       // console.log("id", decodedToken.userId);
       const userId = decodedToken.userId;
 			const get_data_user = await prisma.users.findFirst({
 				where: { id: userId },
 			});
-      console.log("get_data_user", get_data_user);
+    //   console.log("get_data_user", get_data_user);
 
 			const get_assigned_role = await prisma.users.findMany({
 				where: { kode_pegawai: get_data_user.kode_pegawai },
@@ -40,13 +40,24 @@ export class AuthController {
 				semester: decodedToken.semester,
 			};
 
+			let newRole;
+
 			if (get_assigned_role.length > 0) {
 				for (let i = 0; i < get_assigned_role.length; i++) {
-					if (get_assigned_role[i].role == id_role) {
+					// console.log(get_assigned_role[i]);
+					if (get_assigned_role[i].role_id == id_role) {
 						payload.userId = get_assigned_role[i].id;
+						const roleName = await prisma.roles.findFirst({
+							where: { id: get_assigned_role[i].role_id },
+						});
+						// console.log('rolename',roleName);
+						newRole = roleName.role_name;
 						break; // Keluar dari loop setelah menemukan user yang valid
 					}
 				}
+			}
+			if (!newRole) {
+				return res.status(404).json({ message: "User Has not have this role" });
 			}
 
 			const currentTime = Math.floor(Date.now() / 1000);
@@ -68,7 +79,7 @@ export class AuthController {
 
 			res.setHeader("new-authorization", `Bearer ${newAccessToken}`);
 			res.json({
-				message: "Semester updated successfully",
+				message: `Role changed successfully to ${newRole}`,
 			});
 		} catch (error) {
 			next(new AppError(error.message, 500));

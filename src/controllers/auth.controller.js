@@ -79,7 +79,7 @@ export class AuthController {
 		const { pegId, password } = req.body;
 		const semester = await prisma.ref_semester.findFirst({
 			where: {
-				status: "aktif",
+				id_master_kategori_status_ref_semester: 11,
 			},
 		});
 		// console.log(semester);
@@ -146,6 +146,17 @@ export class AuthController {
 			let currentToken = JWTService.extractTokenFromHeader(req);
 
 			const newPreviewsToken = res.getHeader("new-authorization");
+
+			// check if semester is valid
+			const semester = await prisma.ref_semester.findFirst({
+				where: {
+					id: parseInt(id_semester),
+				},
+			});
+
+			if (!semester) {
+				return res.status(404).json({ message: "Semester not found" });
+			}
 
 			if (newPreviewsToken) {
 				console.log("newPreviewsToken", newPreviewsToken);

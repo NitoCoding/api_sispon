@@ -682,6 +682,8 @@ model ref_kurikulum {
   misi            String?           @db.Text
   unit            String?           @db.VarChar(100)
   data_kkm_detail data_kkm_detail[]
+  data_kompetensi_inti data_kompetensi_inti[]
+  data_kompetensi_dasar data_kompetensi_dasar[]
 }
 
 model ref_lokasi {
@@ -704,6 +706,7 @@ model ref_mapel {
   id_master_kategori_ref_mapel  Int?
   ref_master_kategori_ref_mapel ref_master_kategori? @relation(fields: [id_master_kategori_ref_mapel], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "ref_mapel_ibfk_1")
   data_nilai_eskul              data_nilai_eskul[]
+  data_kompetensi_dasar          data_kompetensi_dasar[]
 
   @@unique([kode, keterangan], map: "ref_mapel_kode_IDX")
 }
@@ -788,7 +791,7 @@ enum perihal {
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model data_kompetensi_dasar {
-  id           Int?
+  id           Int  @id @default(autoincrement())
   id_kurikulum Int?
   id_mapel     Int?
   grade        Int?
@@ -797,7 +800,10 @@ model data_kompetensi_dasar {
   deskripsi    String?  @db.Text
   created_by   DateTime @default(now()) @db.Timestamp(0)
 
-  @@ignore
+  kurikulum ref_kurikulum? @relation(fields: [id_kurikulum], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  mapel     ref_mapel?     @relation(fields: [id_mapel], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  kompetensi_inti data_kompetensi_inti? @relation(fields: [id_ki], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
 }
 
 model data_kompetensi_inti {
@@ -807,6 +813,9 @@ model data_kompetensi_inti {
   kode_ki      String?  @db.VarChar(10)
   deskripsi    String?  @db.Text
   created_by   DateTime @default(now()) @db.Timestamp(0)
+
+  kurikulum ref_kurikulum? @relation(fields: [id_kurikulum], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  kompetensi_dasar data_kompetensi_dasar[]
 }
 
 enum data_detail_penggajian_jenis_komponen {

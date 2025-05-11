@@ -1,5 +1,7 @@
 import { prisma } from '../prisma.js';
 import mysql from 'mysql2/promise';
+import { JWTService } from '../services/jwt.service.js';
+import { AppError } from '../middleware/errorHandler.js';
 
 export class SemesterController {
   static createSemester = async(req, res) =>  {
@@ -196,6 +198,42 @@ export class SemesterController {
             success: false,
             message: error.message
         });
+    }
+  }
+
+  static getUserUsedSemester = async(req, res,next) => {
+    try{
+
+      // const currentToken = JWTService.extractTokenFromHeader(req);
+      // const decodedToken = JWTService.decodeToken(currentToken);
+      const payload = req.payload;
+      // console.log("payload", payload);
+
+      const activeSemesterUser = payload.semester;
+
+      const semesters = await prisma.ref_semester.findMany({orderBy: [
+        {
+          id_tahun_ajaran: 'desc'
+        },
+        {
+          urutan: 'asc'
+        }
+      ]});
+
+      // map semesters to new variable add colomn "use" if semester.id == activeSemesterUser
+      const mappedSemesters = semesters.map((semester) => {
+        return {
+          ...semester,
+          use: semester.id == activeSemesterUser ? true : false
+        }
+      })
+
+      res.status(200).json(mappedSemesters);
+
+
+
+    }catch (error) {
+      next(new AppError(error.message, 500)); 
     }
   }
 }

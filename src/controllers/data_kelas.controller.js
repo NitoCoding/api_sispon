@@ -1,18 +1,54 @@
+import { AppError } from "../middleware/errorHandler.js";
 import { prisma } from "../prisma.js"
 
 export class DataKelasController {
+
+  static getPegawaiDetail = async (req) => {
+    const userId = req.userId
+    const user = await prisma.users.findUnique({
+      where: { id: userId },
+    });
+    const pegawaiKode = user.kode_pegawai
+    const pegawai = await prisma.guru_pegawai.findUnique({
+      where: { kode_pegawai: pegawaiKode },
+    });
+
+    // console.log(pegawai.)
+    
+    return pegawai
+  }
   // Data Kelas Operations
   static createDataKelas = async (req, res, next) => {
     try {
-      const { id_semester, id_mapel, nama } = req.body;
+      const payload = req.payload;
+      const semesterId = payload.semester
+
+      // const pegawai = await DataKelasController.getPegawaiDetail(payload)
+      
+      // const gender = pegawai.jk
+
+      const { id_ruang,id_mapel } = req.body;
+
+      const semesterNama = await prisma.ref_semester.findUnique({
+        where: { id: parseInt(semesterId) }
+      });
+      const mapelNama = await prisma.ref_mapel.findUnique({
+        where: { id: parseInt(id_mapel) }
+      });
+      const ruangNama = await prisma.ref_kelas.findUnique({
+        where: { id: parseInt(id_ruang) }
+      })
+
+      const nama = `${mapelNama.nama} ${semesterNama.nama} ${ruangNama.kode} ${tipe} ${gender}`
 
       const kelas = await prisma.data_kelas.create({
         data: {
-          id_semester,
+          id_semester : parseInt(semesterId),
+          id_ruang,
           id_mapel,
           nama,
-          gender,
-          tipe,
+          // gender,
+          // tipe,
           status: 'aktif'
         }
       });
@@ -22,25 +58,25 @@ export class DataKelasController {
         data: kelas
       });
     } catch (error) {
-      next(error)
+      next(new AppError(error.message, 500));
     }
   }
 
   static getAllDataKelas = async (req, res, next) => {
     try {
-      const {tahun_ajaran, semester} = req.query;
+      const payload = req.payload;
+      const pegawai = await DataKelasController.getPegawaiDetail(payload)
+      const semester = payload.semester
+      
+      // if (req.user.)
 
-      if(!tahun_ajaran || !semester) return res.status(400).json({
+      if(!semester) return res.status(400).json({
         success: false,
-        message: 'Tahun ajaran and semester is required' 
+        message: 'semester is required' 
       })
       const kelas = await prisma.data_kelas.findMany({
         where: {
-          id_semester: parseInt(semester),
-        },
-        include: {
-          data_absensi: true,
-          data_rencana_penilaian: true
+          id_semester: parseInt(payload.semester),
         }
       });
 
@@ -49,7 +85,7 @@ export class DataKelasController {
         data: kelas
       });
     } catch (error) {
-      next(error)
+      next(AppError(error.message, 500));
     }
   }
 
@@ -77,14 +113,14 @@ export class DataKelasController {
         data: kelas
       });
     } catch (error) {
-      next(error)
+      next(AppError(error.message, 500));
     }
   }
 
   static updateDataKelas = async (req, res, next) => {
     try {
       const { id } = req.params;
-      const { id_semester, id_mapel, gender,tipe,kode_kelas, status } = req.body;
+      const { id_mapel, gender,tipe,kode_kelas, status } = req.body;
 
       const semesterNama = await prisma.ref_semester.findUnique({
         where: { id: parseInt(id_semester) }

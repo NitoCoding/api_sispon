@@ -1,10 +1,11 @@
+import { AppError } from "../middleware/errorHandler.js";
 import { prisma } from "../prisma.js";
 
 export class MapelController {
   static createMapel = async (req, res) => {
     try {
-      const { kode, nama, kkm_1, kkm_2, kkm_3, keterangan, sifat } = req.body;
-      const { idkur } = req.params;
+      const { kode, nama, nama_arab, keterangan, sifat } = req.body;
+      const { id_kurikulum } = req.params;
 
       // Validate required fields
       if (!kode || !nama) {
@@ -16,7 +17,7 @@ export class MapelController {
 
       // Check if curriculum exists
       const kurikulum = await prisma.ref_kurikulum.findUnique({
-        where: { id: parseInt(idkur) }
+        where: { id: parseInt(id_kurikulum) }
       });
 
       if (!kurikulum) {
@@ -30,8 +31,9 @@ export class MapelController {
       const existingMapel = await prisma.ref_mapel.findFirst({
         where: {
           kode,
-          keterangan,
-          id_kurikulum: parseInt(idkur)
+          // nama,
+          // keterangan,
+          id_kurikulum: parseInt(id_kurikulum)
         }
       });
 
@@ -46,12 +48,10 @@ export class MapelController {
         data: {
           kode,
           nama,
-          kkm_1,
-          kkm_2,
-          kkm_3,
+          nama_arab,
           keterangan,
-          sifat,
-          id_kurikulum: parseInt(idkur)
+          sifat : sifat || "A",
+          id_kurikulum: parseInt(id_kurikulum)
         }
       });
 
@@ -70,11 +70,11 @@ export class MapelController {
 
   static getAllMapel = async (req, res) => {
     try {
-      const { idkur } = req.params;
+      const { id_kurikulum } = req.params;
 
       const mapel = await prisma.ref_mapel.findMany({
         where: {
-          id_kurikulum: parseInt(idkur)
+          id_kurikulum: parseInt(id_kurikulum)
         }
       });
 
@@ -91,22 +91,19 @@ export class MapelController {
     }
   };
 
-  static getMapelById = async (req, res) => {
+  static getMapelById = async (req, res, next) => {
     try {
-      const { id, idkur } = req.params;
+      const { id, id_kurikulum } = req.params;
 
       const mapel = await prisma.ref_mapel.findFirst({
         where: {
           id: parseInt(id),
-          id_kurikulum: parseInt(idkur)
+          id_kurikulum: parseInt(id_kurikulum)
         }
       });
 
       if (!mapel) {
-        return res.status(404).json({
-          success: false,
-          message: "Subject not found"
-        });
+        return next(new AppError("Subject not found", 404));
       }
 
       res.json({
@@ -114,32 +111,30 @@ export class MapelController {
         data: mapel
       });
     } catch (error) {
-      console.error("Error fetching mapel:", error);
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      // console.error("Error fetching mapel:", error);
+      // res.status(500).json({
+      //   success: false,
+      //   message: error.message
+      // });
+      next(new AppError(error.message, 500));
     }
   };
 
-  static updateMapel = async (req, res) => {
+  static updateMapel = async (req, res, next) => {
     try {
-      const { id, idkur } = req.params;
-      const { kode, nama, kkm_1, kkm_2, kkm_3, keterangan, sifat } = req.body;
+      const { id, id_kurikulum } = req.params;
+      const { kode, nama, nama_arab, keterangan, sifat } = req.body;
 
       // Check if mapel exists
       const existingMapel = await prisma.ref_mapel.findFirst({
         where: {
           id: parseInt(id),
-          id_kurikulum: parseInt(idkur)
+          id_kurikulum: parseInt(id_kurikulum)
         }
       });
 
       if (!existingMapel) {
-        return res.status(404).json({
-          success: false,
-          message: "Subject not found"
-        });
+        return next(new AppError("Subject not found", 404));
       }
 
       // If code is being updated, check if it already exists
@@ -148,7 +143,7 @@ export class MapelController {
           where: {
             kode,
             keterangan,
-            id_kurikulum: parseInt(idkur),
+            id_kurikulum: parseInt(id_kurikulum),
             NOT: {
               id: parseInt(id)
             }
@@ -156,10 +151,7 @@ export class MapelController {
         });
 
         if (kodeExists) {
-          return res.status(400).json({
-            success: false,
-            message: "Subject code already exists in this curriculum"
-          });
+          next(new AppError("Subject code already exists", 400));
         }
       }
 
@@ -168,9 +160,7 @@ export class MapelController {
         data: {
           kode,
           nama,
-          kkm_1,
-          kkm_2,
-          kkm_3,
+          nama_arab,
           keterangan,
           sifat
         }
@@ -181,31 +171,29 @@ export class MapelController {
         data: updatedMapel
       });
     } catch (error) {
-      console.error("Error updating mapel:", error);
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      // console.error("Error updating mapel:", error);
+      // res.status(500).json({
+      //   success: false,
+      //   message: error.message
+      // });
+      next(new AppError(error.message, 500));
     }
   };
 
-  static deleteMapel = async (req, res) => {
+  static deleteMapel = async (req, res, next) => {
     try {
-      const { id, idkur } = req.params;
+      const { id, id_kurikulum } = req.params;
 
       // Check if mapel exists
       const existingMapel = await prisma.ref_mapel.findFirst({
         where: {
           id: parseInt(id),
-          id_kurikulum: parseInt(idkur)
+          id_kurikulum: parseInt(id_kurikulum)
         }
       });
 
       if (!existingMapel) {
-        return res.status(404).json({
-          success: false,
-          message: "Subject not found"
-        });
+        next(new AppError("Subject not found", 404));
       }
 
       await prisma.ref_mapel.delete({
@@ -217,11 +205,12 @@ export class MapelController {
         message: "Subject deleted successfully"
       });
     } catch (error) {
-      console.error("Error deleting mapel:", error);
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      // console.error("Error deleting mapel:", error);
+      // res.status(500).json({
+      //   success: false,
+      //   message: error.message
+      // });
+      next(new AppError(error.message, 500));
     }
   };
 }

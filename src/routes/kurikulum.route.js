@@ -3,6 +3,7 @@ const router = express.Router();
 import { KurikulumController } from '../controllers/kurikulum.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { MapelController } from '../controllers/mapel.controller.js';
+import { KompetensiController } from '../controllers/kompetensi.controller.js';
 
 // Apply authentication middleware to all routes
 router.use(authenticate);
@@ -22,14 +23,16 @@ router.put('/:id', KurikulumController.updateKurikulum);
 // Delete a kurikulum
 router.delete('/:id', KurikulumController.deleteKurikulum);
 
-router.get('/:idkur/mapel', MapelController.getAllMapel)
+router.get('/:id_kurikulum/mapel', MapelController.getAllMapel)
 
-router.get('/:idkur/mapel/:id', MapelController.getMapelById)
+router.get('/:id_kurikulum/mapel/:id', MapelController.getMapelById)
 
-router.post('/:idkur/mapel', MapelController.createMapel)
+router.post('/:id_kurikulum/mapel', MapelController.createMapel)
 
-router.put('/:idkur/mapel/:id', MapelController.updateMapel)
+router.put('/:id_kurikulum/mapel/:id', MapelController.updateMapel)
 
-router.delete('/:idkur/mapel/:id', MapelController.deleteMapel)
+router.delete('/:id_kurikulum/mapel/:id', MapelController.deleteMapel)
+
+router.get('/:id_kurikulum/cpl', KompetensiController.getAllKompetensiIntiByKurikulum)
 
 export default router;

@@ -83,6 +83,10 @@ import masterKategoriRoutes from './routes/master_kategori.route.js';
 import ekskulSantriRoutes from "./routes/ekskul_santri.route.js";
 import ekskulRoute from "./routes/ekskul.route.js";
 import prestasiPelanggaranRoute from "./routes/prestasi_pelanggaran.route.js";
+import beasiswaRouter from "./routes/beasiswa.route.js";
+import beasiswsSantriRouter from "./routes/beasiswa_santri.route.js";
+
+import tagihanSantriRouter from "./routes/tagihan_santri.route.js";
 
 
 app.use('/auth', authRoutes);
@@ -102,7 +106,12 @@ app.use('/master-kategori', masterKategoriRoutes)
 app.use('/kti', ktiRoutes);
 app.use('/ekskul-santris', ekskulSantriRoutes);
 app.use('/ekskuls', ekskulRoute);
+
+app.use('/beasiswa', beasiswaRouter)
+app.use('/beasiswa-santris', beasiswsSantriRouter)
 app.use('/prestasi-pelanggarans', prestasiPelanggaranRoute);
+
+app.use('/tagihan', tagihanSantriRouter)
 // Error handling
 app.use(errorHandler);
 

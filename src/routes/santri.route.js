@@ -6,13 +6,13 @@ import {
     createSantri, createSantriMassal, deleteSantri,
     getAllSantri, getAlumni,
     getSantriById,
-    migrateSantri, printSantriList,
+    printSantriList,
     updateSantri
 } from "../controllers/santri.controller.js";
 import {upload} from "../middleware/upload.middleware.js";
 import {authenticate, checkPermission} from "../middleware/auth.middleware.js";
 
-router.get('/sync', authenticate, migrateSantri);
+// router.get('/sync', authenticate, migrateSantri);
 router.post("/mass-input", authenticate, upload.single("file"), createSantriMassal);
 router.get('/print-santri-list', printSantriList);
 router.get('/alumni/:id_tahun_ajaran', authenticate, getAlumni)

@@ -7,7 +7,7 @@ import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import exceljs from 'exceljs';
-import { printPdf } from '../helpers.js';
+import { printPdf } from '../services/export.service.js';
 import path from 'path';
 
 const __filename = fileURLToPath(import.meta.url);

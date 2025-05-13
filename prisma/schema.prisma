@@ -87,7 +87,7 @@ model santri {
   ref_master_kategori_status_santri ref_master_kategori?     @relation(fields: [id_master_kategori_status_santri], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "santri_ibfk_1")
   data_beasiswa_santri              data_beasiswa_santri[]
   data_nilai_eskul                  data_nilai_eskul[]
-  data_pembayaran_santri            data_pembayaran_santri[]
+  data_tagihan_santri            data_tagihan_santri[]
 
 }
 
@@ -276,17 +276,17 @@ model data_kelas_pengajar {
 
 model data_konfigurasi_biaya {
   id                   Int                   @id @default(autoincrement())
-  id_jenis_pembayaran  Int?
+  id_jenis_tagihan  Int?
   id_kelas             Int?
   id_tahun_ajaran      Int?
   nominal               Decimal               @db.Decimal(15, 2)
   created_at           DateTime?             @default(now()) @db.Timestamp(0)
   updated_at           DateTime?             @default(now()) @db.Timestamp(0)
-  ref_jenis_pembayaran_santri ref_jenis_pembayaran_santri? @relation(fields: [id_jenis_pembayaran], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "data_konfigurasi_biaya_ibfk_1")
+  ref_jenis_tagihan_santri ref_jenis_tagihan_santri? @relation(fields: [id_jenis_tagihan], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "data_konfigurasi_biaya_ibfk_1")
   ref_kelas            ref_kelas?            @relation(fields: [id_kelas], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "data_konfigurasi_biaya_ibfk_2")
   ref_tahun_ajaran     ref_tahun_ajaran?     @relation(fields: [id_tahun_ajaran], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "data_konfigurasi_biaya_ibfk_3")
 
-  @@index([id_jenis_pembayaran], map: "id_jenis_pembayaran")
+  @@index([id_jenis_tagihan], map: "id_jenis_tagihan")
   @@index([id_kelas], map: "id_kelas")
   @@index([id_tahun_ajaran], map: "id_tahun_ajaran")
 }
@@ -338,17 +338,17 @@ model data_pegawai_gaji {
   status      data_pegawai_gaji_status?
 }
 
-model data_pembayaran_santri {
+model data_tagihan_santri {
   id                              Int                                       @id @default(autoincrement())
   id_santri                       Int?
   santri                          santri?                                   @relation(fields: [id_santri], references: [id], onDelete: Restrict, onUpdate: Restrict)
   // id_tahun_ajaran   Int?
   // id_semester       Int?
-  id_jenis_pembayaran             Int?
-  jenis_pembayaran                ref_jenis_pembayaran_santri?                     @relation(fields: [id_jenis_pembayaran], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  id_jenis_tagihan             Int?
+  ref_jenis_tagihan_santri                ref_jenis_tagihan_santri?                     @relation(fields: [id_jenis_tagihan], references: [id], onDelete: Restrict, onUpdate: Restrict)
   tanggal_bayar                   DateTime?                                 @db.Date
   nominal                         Decimal?                                  @db.Decimal(15, 2)
-  metode_pembayaran               data_pembayaran_santri_metode_pembayaran?
+  metode_pembayaran               data_tagihan_santri_metode_pembayaran?
   status                          Int?
   ref_master_kategori             ref_master_kategori?                      @relation(fields: [status], references: [id], onDelete: Restrict, onUpdate: Restrict)
   nomor_referensi                 String?                                   @db.VarChar(100)
@@ -357,13 +357,13 @@ model data_pembayaran_santri {
   updated_at   DateTime?                       @db.Timestamp(0)
   created_by   Int?
   updated_by   Int?                             
-  data_pembayaran_santri_potongan data_pembayaran_santri_potongan[]
+  data_tagihan_santri_potongan data_tagihan_santri_potongan[]
 }
 
-model data_pembayaran_santri_potongan {
+model data_tagihan_santri_potongan {
   id            Int                      @id @default(autoincrement())
   pembayaran_id Int
-  pembayaran    data_pembayaran_santri   @relation(fields: [pembayaran_id], references: [id])
+  pembayaran    data_tagihan_santri   @relation(fields: [pembayaran_id], references: [id])
   tipe          pembayaran_potongan_tipe
   keterangan    String?
   nominal       Decimal                  @db.Decimal(15, 2)
@@ -571,15 +571,15 @@ model ref_jenis_keuangan {
   data_transaksi_keuangan data_transaksi_keuangan[]
 }
 
-model ref_jenis_pembayaran_santri {
+model ref_jenis_tagihan_santri {
   id                     Int                            @id @default(autoincrement())
   nama                   String                         @db.VarChar(100)
   deskripsi              String?                        @db.Text
-  frekuensi              ref_jenis_pembayaran_frekuensi
+  frekuensi              ref_jenis_tagihan_frekuensi
   is_mandatory           Boolean?                       @default(true)
   created_at             DateTime?                      @default(now()) @db.Timestamp(0)
   data_konfigurasi_biaya data_konfigurasi_biaya[]
-  data_pembayaran_santri data_pembayaran_santri[]
+  data_tagihan_santri data_tagihan_santri[]
 }
 
 model ref_jenis_potongan {
@@ -656,7 +656,7 @@ model ref_master_kategori {
   deskripsi String?              @db.Text
   tipe      tipe_master_kategori
 
-  data_pembayaran_santri data_pembayaran_santri[] @relation(map: "data_pembayaran_santri_ref_master_kategori_FK")
+  data_tagihan_santri data_tagihan_santri[] @relation(map: "data_tagihan_santri_ref_master_kategori_FK")
   ref_mapel              ref_mapel[]
   data_rombel_anggota    data_rombel_anggota[]    @relation(map: "data_rombel_anggota_ref_master_kategori_FK")
   data_rombel            data_rombel[]            @relation(map: "data_rombel_ibfk_1")
@@ -824,6 +824,7 @@ model data_kompetensi_dasar {
 model data_kompetensi_inti {
   id           Int      @id @default(autoincrement())
   id_kurikulum Int?
+  kelompok     kelompok_kompetensi_inti?
   grade        Int?
   kode_ki      String?  @db.VarChar(10)
   deskripsi    String?  @db.Text
@@ -832,6 +833,13 @@ model data_kompetensi_inti {
   kurikulum ref_kurikulum? @relation(fields: [id_kurikulum], references: [id], onDelete: Restrict, onUpdate: Restrict)
   kompetensi_dasar data_kompetensi_dasar[]
 
+}
+
+enum kelompok_kompetensi_inti  {
+  sikap
+  pengetahuan
+  keterampilan_umum
+  keterampilan_khusus
 }
 
 enum data_detail_penggajian_jenis_komponen {
@@ -847,7 +855,7 @@ enum ref_jenis_keuangan_kategori {
   pengeluaran
 }
 
-enum ref_jenis_pembayaran_frekuensi {
+enum ref_jenis_tagihan_frekuensi {
   sekali
   tahunan
   semester
@@ -927,13 +935,13 @@ enum data_penilaian_karakter_nilai {
 //   nonaktif
 // }
 
-enum data_pembayaran_santri_metode_pembayaran {
+enum data_tagihan_santri_metode_pembayaran {
   tunai
   transfer
   virtual_account
 }
 
-enum data_pembayaran_santri_status {
+enum data_tagihan_santri_status {
   pending
   success
   cancelled

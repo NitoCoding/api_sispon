@@ -52,9 +52,6 @@ export const decrypt = (encryptedText) => {
     }
 };
 
-
-
-
 export const trimmedString = (str) => {
     if (typeof str !== 'string') {
         throw new AppError('Input must be a string', 400);

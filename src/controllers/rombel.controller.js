@@ -1,14 +1,37 @@
 
 import { prisma } from '../prisma.js';
+import {JWTService} from "../services/jwt.service.js";
+import {getTokenPayload} from "../helpers.js";
 
 // Get all data_rombel
 export const getAllRombel = async (req, res, next) => {
     try {
-        const tahun_ajaran = req.query.tahun_ajaran;
+        const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
         
-        const rombels = await prisma.data_rombel.findMany();
-        res.status(200).json(rombels);
+        const rombels = await prisma.data_rombel.findMany(
+            {
+                where: {
+                    id_tahun_ajaran: semester.id_tahun_ajaran,
+                },
+                include: { 
+                    ref_master_kategori_data_rombel: true,
+                    ref_kelas:true
+                }
+            }
+        );
+
+        const mappedRombels = rombels.map((rombels) => {
+            const { nama, ref_master_kategori_data_rombel, ref_kelas,  ...rest } = rombels;
+            return {
+                ...rest,
+                status: ref_master_kategori_data_rombel.nama,
+                kelas: ref_kelas.kelas,
+            };
+        });
+
+        res.status(200).json(mappedRombels);
     } catch (error) {
+        console.log(error);
         next(error);
     }
 };
@@ -35,14 +58,14 @@ export const createRombel = async (req, res, next) => {
             id_tahun_ajaran,
             id_wali_kelas,
             nama,
-            status } = req.body;
+            id_master_kategori_data_rombel } = req.body;
         const newRombel = await prisma.data_rombel.create({
             data: {
                 id_kelas,
                 id_tahun_ajaran,
                 id_wali_kelas,
                 nama,
-                status
+                id_master_kategori_data_rombel
             }
         });
         res.status(201).json(newRombel);

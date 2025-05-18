@@ -1,7 +1,7 @@
 import { prisma } from "../prisma.js";
 
 export class MapelController {
-  static createMapel = async (req, res) => {
+  static createMapel = async (req, res, next) => {
     try {
       const { kode, nama, kkm_1, kkm_2, kkm_3, keterangan, sifat } = req.body;
       const { idkur } = req.params;
@@ -60,15 +60,11 @@ export class MapelController {
         data: newMapel
       });
     } catch (error) {
-      console.error("Error creating mapel:", error);
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   };
 
-  static getAllMapel = async (req, res) => {
+  static getAllMapel = async (req, res, next) => {
     try {
       const { idkur } = req.params;
 
@@ -83,15 +79,11 @@ export class MapelController {
         data: mapel
       });
     } catch (error) {
-      console.error("Error fetching mapel:", error);
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   };
 
-  static getMapelById = async (req, res) => {
+  static getMapelById = async (req, res, next) => {
     try {
       const { id, idkur } = req.params;
 
@@ -114,15 +106,11 @@ export class MapelController {
         data: mapel
       });
     } catch (error) {
-      console.error("Error fetching mapel:", error);
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   };
 
-  static updateMapel = async (req, res) => {
+  static updateMapel = async (req, res, next) => {
     try {
       const { id, idkur } = req.params;
       const { kode, nama, kkm_1, kkm_2, kkm_3, keterangan, sifat } = req.body;
@@ -181,15 +169,11 @@ export class MapelController {
         data: updatedMapel
       });
     } catch (error) {
-      console.error("Error updating mapel:", error);
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   };
 
-  static deleteMapel = async (req, res) => {
+  static deleteMapel = async (req, res, next) => {
     try {
       const { id, idkur } = req.params;
 
@@ -217,11 +201,7 @@ export class MapelController {
         message: "Subject deleted successfully"
       });
     } catch (error) {
-      console.error("Error deleting mapel:", error);
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   };
 }

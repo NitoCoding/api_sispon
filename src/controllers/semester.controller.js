@@ -1,8 +1,14 @@
 import { prisma } from '../prisma.js';
 import mysql from 'mysql2/promise';
 
+/*
+Master Kategori Ref Semester:
+- 11 = Aktif
+- 12 = Inktif
+*/
+
 export class SemesterController {
-  static createSemester = async(req, res) =>  {
+  static createSemester = async(req, res, next) =>  {
     try {
       const { id_tahun_ajaran, nama, urutan, status } = req.body;
 
@@ -20,27 +26,36 @@ export class SemesterController {
         data: semester
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   }
 
-  static getAllSemesters= async(req, res) =>  {
+  static getAllSemesters= async(req, res, next) =>  {
     try {
-      const semesters = await prisma.ref_semester.findMany({});
-
-      res.status(200).json(semesters);
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
+      const semesters = await prisma.ref_semester.findMany({
+        include: {
+          ref_tahun_ajaran: true,
+          ref_master_kategori_status_ref_semester: true
+        }
       });
+
+      const flatSemesters = semesters.map((semester) => {
+        const { ref_tahun_ajaran, ref_master_kategori_status_ref_semester, ...rest } = semester;
+        return {
+          ...rest,
+          status: ref_master_kategori_status_ref_semester.nama,
+          tahun_ajaran: ref_tahun_ajaran.nama
+        };
+      });
+
+      res.status(200).json(flatSemesters);
+    } catch (error) {
+      console.log(error);
+      next(error);
     }
   }
 
-  static getSemesterById = async(req, res) => {
+  static getSemesterById = async(req, res, next) => {
     try {
       const { id } = req.params;
 
@@ -63,37 +78,44 @@ export class SemesterController {
         data: semester
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   }
 
-  static getActiveSemester = async(req, res) => {
+  static getActiveSemester = async(req, res, next) => {
     try{
       const active_semester = await prisma.ref_semester.findFirst({
         where: {
-          status: 'aktif'
+          id_master_kategori_status_ref_semester: 11,
+        },
+        include: {
+          ref_master_kategori_status_ref_semester: true,
+          ref_tahun_ajaran: true
         }
       })
-      res.status(200).json(active_semester);
+
+      const { ref_tahun_ajaran, ref_master_kategori_status_ref_semester, ...rest } = active_semester;
+      const flatActiveSemester = {
+        ...rest,
+        status: ref_master_kategori_status_ref_semester.nama,
+        tahun_ajaran: ref_tahun_ajaran.nama
+      }
+
+      res.status(200).json(flatActiveSemester);
     } catch (e) {
-      res.status(500).json({
-        "message" : e.message
-      })
+      next(e);
     }
   }
 
-  static setActiveSemester = async(req, res) => {
+  static setActiveSemester = async(req, res, next) => {
     try{
       const { id } = req.params;
       await prisma.ref_semester.updateMany({
         where: {
-          status: 'aktif'
+          id_master_kategori_status_ref_semester: 11
         },
         data: {
-          status: 'nonaktif'
+          id_master_kategori_status_ref_semester: 12
         }
       })
       const updatedSemester = await prisma.ref_semester.update({
@@ -101,18 +123,16 @@ export class SemesterController {
           id: parseInt(id)
         },
         data: {
-          status: 'aktif'
+          id_master_kategori_status_ref_semester: 11
         }
       })
       res.status(200).json(updatedSemester)
     } catch (e) {
-      res.status(500).json({
-        "message" : e.message
-      })
+      next(e);
     }
   }
 
-  static updateSemester = async(req, res) =>  {
+  static updateSemester = async(req, res, next) =>  {
     try {
       const { id } = req.params;
       const { id_tahun_ajaran, nama, urutan, status } = req.body;
@@ -132,14 +152,11 @@ export class SemesterController {
         data: semester
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   }
 
-  static deleteSemester = async(req, res) =>  {
+  static deleteSemester = async(req, res, next) =>  {
     try {
       const { id } = req.params;
 
@@ -152,10 +169,7 @@ export class SemesterController {
         message: 'Semester deleted successfully'
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   }
 
@@ -173,7 +187,7 @@ export class SemesterController {
               id_tahun_ajaran: tahun.id,
               nama: 'Ganjil ' + tahun.nama,
               urutan: 1,
-              status: 'aktif'
+              id_master_kategori_status_ref_semester: 11
             }
           });
           const semester2 = await prisma.ref_semester.create({
@@ -181,7 +195,7 @@ export class SemesterController {
               id_tahun_ajaran: tahun.id,
               nama: 'Genap ' + tahun.nama,
               urutan: 2,
-              status: 'aktif'
+              id_master_kategori_status_ref_semester: 11
             }
           });
         }

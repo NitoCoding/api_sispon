@@ -1,7 +1,7 @@
 import prisma from '../prisma.js';
 
 export class KurikulumController {
-  static createKurikulum = async(req, res) =>  {
+  static createKurikulum = async(req, res, next) =>  {
     try {
       const { nama } = req.body;
 
@@ -21,14 +21,11 @@ export class KurikulumController {
         data: kurikulum
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   }
 
-  static getAllKurikulum = async(req, res) =>  {
+  static getAllKurikulum = async(req, res, next) =>  {
     try {
       const kurikulum = await prisma.ref_kurikulum.findMany();
 
@@ -37,14 +34,11 @@ export class KurikulumController {
         data: kurikulum
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   }
 
-  static getKurikulumById = async(req, res) => {
+  static getKurikulumById = async(req, res, next) => {
     try {
       const { id } = req.params;
 
@@ -64,14 +58,11 @@ export class KurikulumController {
         data: kurikulum
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   }
 
-  static updateKurikulum = async(req, res) =>  {
+  static updateKurikulum = async(req, res, next) =>  {
     try {
       const { id } = req.params;
       const { nama } = req.body;
@@ -93,14 +84,11 @@ export class KurikulumController {
         data: kurikulum
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   }
 
-  static deleteKurikulum = async(req, res) =>  {
+  static deleteKurikulum = async(req, res, next) =>  {
     try {
       const { id } = req.params;
 
@@ -113,10 +101,7 @@ export class KurikulumController {
         message: 'Kurikulum deleted successfully'
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   }
 }

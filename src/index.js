@@ -14,7 +14,9 @@ const app = express();
 
 // Security Middleware
 app.use(helmet()); // Helps secure Express apps with various HTTP headers
-app.use(cors()); // Enable Cross-Origin Resource Sharing
+app.use(cors({
+  exposedHeaders: ['new-authorization'], // Izinkan header kustom
+})); // Enable Cross-Origin Resource Sharing
 app.use(compression()); // Compress response bodies
 
 // Rate limiting
@@ -25,7 +27,10 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Request logging
-app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
+// app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
+app.use(morgan(':method :url :status', {
+  stream: { write: message => logger.info(message.trim()) }
+}));
 
 // Body parsing
 app.use(express.json({ limit: '10kb' })); // Body limit is 10kb
@@ -56,6 +61,9 @@ import ktiRoutes from "./routes/kti.route.js";
 import ekskulSantriRoutes from "./routes/ekskul_santri.route.js";
 import ekskulRoute from "./routes/ekskul.route.js";
 import prestasiPelanggaranRoute from "./routes/prestasi_pelanggaran.route.js";
+import rolesRoutes from "./routes/role.route.js";
+import dataKelasRoutes from "./routes/data_kelas.route.js";
+import rombelKelasRoutes from "./routes/rombel_kelas.route.js";
 
 app.use('/auth', authRoutes);
 app.use('/tahun-ajarans', tahunAjaranRoutes)
@@ -70,6 +78,9 @@ app.use('/kti', ktiRoutes);
 app.use('/ekskul-santris', ekskulSantriRoutes);
 app.use('/ekskuls', ekskulRoute);
 app.use('/prestasi-pelanggarans', prestasiPelanggaranRoute);
+app.use('/roles', rolesRoutes);
+app.use('/data-kelas', dataKelasRoutes);
+app.use('/rombel-kelas', rombelKelasRoutes);
 
 // Error handling
 app.use(errorHandler);

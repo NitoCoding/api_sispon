@@ -3,18 +3,8 @@ import { config } from '../config/index.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 export class JWTService {
-  static async generateToken(payload, expiresIn = '15m') {
-    const secretKey = new TextEncoder().encode(config.jwtSecret);
-    
-    // const accessToken = await new jose.SignJWT(payload)
-    //   .setProtectedHeader({ alg: 'HS256' })
-    //   .setExpiresIn(config.jwtExpiresIn)
-    //   .sign(secret);
-
-    // const refreshToken = await new jose.SignJWT(payload)
-    //   .setProtectedHeader({ alg: 'HS256' })
-    //   .setExpiresIn('7d')
-    //   .sign(secret);
+  static async generateToken(payload, expiresIn = '15m', secret = config.jwtSecret ) {
+    const secretKey = new TextEncoder().encode(secret);
 
     // return { accessToken, refreshToken };
 
@@ -22,18 +12,18 @@ export class JWTService {
       .setProtectedHeader({ alg: 'HS256' })
       .setExpirationTime(expiresIn)
       .sign(secretKey);
-    
+
     return jwt;
   }
 
-  static async verifyToken(token) {
+  static async verifyToken(token, secret = config.jwtSecret) {
     try {
-      const secret = new TextEncoder().encode(config.jwtSecret);
-      const { payload } = await jose.jwtVerify(token, secret);
+      const secretJWT = new TextEncoder().encode(secret);
+      const { payload } = await jose.jwtVerify(token, secretJWT);
       return payload;
     } catch (error) {
       if (error.code === 'ERR_JWT_EXPIRED') {
-        throw new AppError('Token has expired', 401);
+        throw new AppError('Token has expired', 401, error.payload);
       }
       throw new AppError('Invalid token', 401);
     }

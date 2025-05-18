@@ -1,31 +1,12 @@
 import { prisma } from '../prisma.js';
 import {JWTService} from "../services/jwt.service.js";
+import {getTokenPayload} from "../helpers.js";
 
 export class KtiController {
     static getAllKti = async (req, res, next) => {
         try {
             const { groupbyclass, class: className } = req.query;
-            const token = req.headers.authorization?.split(" ")[1];
-            console.log(token);
-
-            if (!token) {
-                return res.status(401).json({ message: "Unauthorized" });
-            }
-
-            const decoded = JWTService.decodeToken(token);
-            const semester = await prisma.ref_semester.findFirst({
-                where: { id: parseInt(decoded.semester) },
-            });
-            if (!semester) {
-                return res.status(400).json({ message: "Invalid token: Missing semester" });
-            }
-
-            const tahunAjaran = await prisma.ref_tahun_ajaran.findFirst({
-                where: { id: semester.id_tahun_ajaran },
-            });
-            if (!tahunAjaran) {
-                return res.status(404).json({ message: "Academic year not found" });
-            }
+            const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
 
             const whereClause = { id_tahun_ajaran: tahunAjaran.id };
             if (className) {
@@ -220,37 +201,7 @@ export class KtiController {
     static updateKti = async (req, res, next) => {
         try {
             // Ambil token dari header Authorization
-            const token = req.headers.authorization?.split(" ")[1];
-            if (!token) {
-                return res.status(401).json({ message: "Unauthorized: No token provided" });
-            }
-
-            // Dekode token untuk mendapatkan semester
-            const decoded = JWTService.decodeToken(token);
-            console.log("Decoded token:", decoded);
-            if (!decoded.semester) {
-                return res.status(400).json({ message: "Invalid token: Missing semester" });
-            }
-
-            // Ambil data semester
-            const semester = await prisma.ref_semester.findFirst({
-                where: { id: parseInt(decoded.semester) }
-            });
-            if (!semester) {
-                return res.status(400).json({ message: "Invalid semester in token" });
-            }
-
-            // Ambil tahun ajaran terkait
-            const tahunAjaran = await prisma.ref_tahun_ajaran.findFirst({
-                where: { id: semester.id_tahun_ajaran }
-            });
-            if (!tahunAjaran) {
-                return res.status(404).json({ message: "Academic year not found" });
-            }
-
-            // Logging untuk debugging
-            console.log("Semester:", semester);
-            console.log("Tahun Ajaran:", tahunAjaran);
+            const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
 
             // Ambil input dari req.body
             const { id_santri, nilai, judul } = req.body;
@@ -267,10 +218,6 @@ export class KtiController {
             if (id_santri_list.length === 0) {
                 return res.status(400).json({ message: "id_santri list cannot be empty" });
             }
-
-            // Logging input
-            console.log("Received input:", { id_santri, nilai, judul });
-            console.log("id_santri_list:", id_santri_list);
 
             // Siapkan data untuk update atau create
             const updateData = {};

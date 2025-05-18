@@ -1,5 +1,6 @@
 import { prisma } from "../prisma.js";
 import {JWTService} from "../services/jwt.service.js";
+import {getTokenPayload} from "../helpers.js";
 
 export class EkskulSantriController {
     static createEkskulSantri = async (req, res) => {
@@ -38,26 +39,7 @@ export class EkskulSantriController {
     static getAllEkskulSantri = async (req, res, next) => {
         try {
             const { groupbyclass, class: className } = req.query;
-            const token = req.headers.authorization?.split(" ")[1];
-
-            if (!token) {
-                return res.status(401).json({ message: "Unauthorized" });
-            }
-
-            const decoded = JWTService.decodeToken(token);
-            const semester = await prisma.ref_semester.findFirst({
-                where: { id: parseInt(decoded.semester) },
-            });
-            if (!semester) {
-                return res.status(400).json({ message: "Invalid token: Missing semester" });
-            }
-
-            const tahunAjaran = await prisma.ref_tahun_ajaran.findFirst({
-                where: { id: semester.id_tahun_ajaran },
-            });
-            if (!tahunAjaran) {
-                return res.status(404).json({ message: "Academic year not found" });
-            }
+            const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
 
             const whereClause = { id_tahun_ajaran: tahunAjaran.id };
             if (className) {
@@ -179,26 +161,7 @@ export class EkskulSantriController {
     static getEkskulSantriById = async (req, res, next) => {
         try {
             const { id } = req.params;
-            const token = req.headers.authorization?.split(" ")[1];
-
-            if (!token) {
-                return res.status(401).json({ message: "Unauthorized" });
-            }
-
-            const decoded = JWTService.decodeToken(token);
-            const semester = await prisma.ref_semester.findFirst({
-                where: { id: parseInt(decoded.semester) },
-            });
-            if (!semester) {
-                return res.status(400).json({ message: "Invalid token: Missing semester" });
-            }
-
-            const tahunAjaran = await prisma.ref_tahun_ajaran.findFirst({
-                where: { id: semester.id_tahun_ajaran },
-            });
-            if (!tahunAjaran) {
-                return res.status(404).json({ message: "Academic year not found" });
-            }
+            const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
 
             // Get the student data
             const santri = await prisma.santri.findUnique({

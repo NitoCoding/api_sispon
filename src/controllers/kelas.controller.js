@@ -2,7 +2,7 @@ import { prisma } from "../prisma.js";
 import mysql from 'mysql2/promise';
 
 export class KelasController {
-  static createKelas = async (req, res) => {
+  static createKelas = async (req, res, next) => {
     try {
       const {
         kelas,
@@ -54,12 +54,11 @@ export class KelasController {
 
       res.status(201).json(newKelas);
     } catch (error) {
-      console.error("Error creating kelas:", error);
-      res.status(500).json({ message: "Internal server error" });
+      next(error);
     }
   };
 
-  static getAllKelas = async (req, res) => {
+  static getAllKelas = async (req, res, next) => {
     try {
       const kelas = await prisma.ref_kelas.findMany({
         include: {
@@ -68,12 +67,11 @@ export class KelasController {
       });
       res.json(kelas);
     } catch (error) {
-      console.error("Error fetching kelas:", error);
-      res.status(500).json({ message: "Internal server error" });
+      next(error);
     }
   };
 
-  static getKelasById = async (req, res) => {
+  static getKelasById = async (req, res, next) => {
     try {
       const { id } = req.params;
       const kelas = await prisma.ref_kelas.findUnique({
@@ -89,12 +87,11 @@ export class KelasController {
 
       res.json(kelas);
     } catch (error) {
-      console.error("Error fetching kelas:", error);
-      res.status(500).json({ message: "Internal server error" });
+      next(error);
     }
   };
 
-  static updateKelas = async (req, res) => {
+  static updateKelas = async (req, res, next) => {
     try {
       const { id } = req.params;
       const {
@@ -152,12 +149,11 @@ export class KelasController {
 
       res.json(updatedKelas);
     } catch (error) {
-      console.error("Error updating kelas:", error);
-      res.status(500).json({ message: "Internal server error" });
+      next(error);
     }
   };
 
-  static deleteKelas = async (req, res) => {
+  static deleteKelas = async (req, res, next) => {
     try {
       const { id } = req.params;
 
@@ -187,8 +183,7 @@ export class KelasController {
 
       res.json({ message: "Kelas deleted successfully" });
     } catch (error) {
-      console.error("Error deleting kelas:", error);
-      res.status(500).json({ message: "Internal server error" });
+      next(error);
     }
   };
 

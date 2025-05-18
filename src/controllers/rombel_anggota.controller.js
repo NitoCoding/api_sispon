@@ -55,18 +55,7 @@ export class RombelAnggotaController {
 
     static async syncRombel(req, res, next) {
         try {
-            const token = req.headers.authorization?.split(" ")[1];
-            if (!token) {
-                return res.status(401).json({ message: "Unauthorized" });
-            }
-
-            const decoded = JWTService.decodeToken(token);
-            const semester = await prisma.ref_semester.findFirst({
-                where: { id: parseInt(decoded.semester) },
-            });
-            if (!semester) {
-                return res.status(400).json({ message: "Invalid token: Missing semester" });
-            }
+            const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
 
             const class_list = await prisma.ref_kelas.findMany();
 

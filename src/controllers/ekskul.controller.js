@@ -1,7 +1,7 @@
 import { prisma } from "../prisma.js";
 
 export class EkskulController {
-    static createEkskul = async (req, res) => {
+    static createEkskul = async (req, res, next) => {
         try {
             const { kode, nama, kkm_1, kkm_2, kkm_3, keterangan, id_kurikulum, id_master_kategori } = req.body;
 
@@ -48,7 +48,7 @@ export class EkskulController {
         }
     };
 
-    static getAllEkskul = async (req, res) => {
+    static getAllEkskul = async (req, res, next) => {
         try {
             const { ekskul_master_ids } = await prisma.ref_master_kategori.findMany({
                 where: {
@@ -68,12 +68,13 @@ export class EkskulController {
             });
 
             res.status(200).json(mapels);
-        } catch (error) {
+        }
+        catch (error) {
             next(error);
         }
     };
 
-    static getEkskulById = async (req, res) => {
+    static getEkskulById = async (req, res, next) => {
         try {
             const { id } = req.params;
             const mapel = await prisma.ref_mapel.findUnique({
@@ -90,7 +91,7 @@ export class EkskulController {
         }
     };
 
-    static updateEkskul = async (req, res) => {
+    static updateEkskul = async (req, res, next) => {
         try {
             const { id } = req.params;
             const { kode, nama, kkm_1, kkm_2, kkm_3, keterangan, id_kurikulum, id_master_kategori } = req.body;
@@ -150,7 +151,7 @@ export class EkskulController {
         }
     };
 
-    static deleteEkskul = async (req, res) => {
+    static deleteEkskul = async (req, res, next) => {
         try {
             const { id } = req.params;
 

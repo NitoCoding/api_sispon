@@ -1,4 +1,3 @@
-import { AppError } from '../middleware/errorHandler.js';
 import { prisma } from '../prisma.js';
 import mysql from 'mysql2/promise';
 import {JWTService} from "../services/jwt.service.js";
@@ -63,6 +62,21 @@ export const createGuruPegawai = async (req, res, next) => {
 export const getAllGuruPegawai = async (req, res, next) => {
     try {
         const guruPegawai = await prisma.guru_pegawai.findMany();
+
+        res.status(200).json(guruPegawai);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getAllGuruPegawaiLogin = async (req, res, next) => {
+    try {
+        const guruPegawai = await prisma.guru_pegawai.findMany({
+            select: {
+                id: true,
+                nama_gp: true
+            }
+        });
 
         res.status(200).json(guruPegawai);
     } catch (error) {

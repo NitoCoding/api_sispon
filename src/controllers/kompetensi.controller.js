@@ -1,7 +1,7 @@
 import { prisma } from '../prisma.js';
 
 export class KompetensiController {
-  static createKompetensi = async (req, res) => {
+  static createKompetensi = async (req, res, next) => {
     try {
       const { kode_kompetensi, id_kurikulum, id_mapel, fase, tingkat, konten } = req.body;
       const { created_by } = req.user;
@@ -70,15 +70,11 @@ export class KompetensiController {
         data: kompetensi
       });
     } catch (error) {
-      console.error('Error creating competency:', error);
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   }
 
-  static getAllKompetensiByKurikulum = async (req, res) => {
+  static getAllKompetensiByKurikulum = async (req, res, next) => {
     try {
       const { id_kurikulum } = req.params;
 
@@ -95,15 +91,11 @@ export class KompetensiController {
         data: kompetensi
       });
     } catch (error) {
-      console.error('Error fetching competencies:', error);
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   }
 
-  static getAllKompetensiByMapel = async (req, res) => {
+  static getAllKompetensiByMapel = async (req, res, next) => {
     try {
       const { id_kurikulum, id_mapel } = req.params;
 
@@ -123,15 +115,11 @@ export class KompetensiController {
         data: kompetensi
       });
     } catch (error) {
-      console.error('Error fetching competencies:', error);
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   }
 
-  static getKompetensiById = async (req, res) => {
+  static getKompetensiById = async (req, res, next) => {
     try {
       const { id } = req.params;
 
@@ -155,15 +143,11 @@ export class KompetensiController {
         data: kompetensi
       });
     } catch (error) {
-      console.error('Error fetching competency:', error);
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   }
 
-  static updateKompetensi = async (req, res) => {
+  static updateKompetensi = async (req, res, next) => {
     try {
       const { id } = req.params;
       const { kode_kompetensi, fase, tingkat, konten } = req.body;
@@ -214,15 +198,11 @@ export class KompetensiController {
         data: updatedKompetensi
       });
     } catch (error) {
-      console.error('Error updating competency:', error);
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   }
 
-  static deleteKompetensi = async (req, res) => {
+  static deleteKompetensi = async (req, res, next) => {
     try {
       const { id } = req.params;
 
@@ -247,11 +227,7 @@ export class KompetensiController {
         message: 'Competency deleted successfully'
       });
     } catch (error) {
-      console.error('Error deleting competency:', error);
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+      next(error);
     }
   }
 }

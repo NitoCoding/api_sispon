@@ -1,12 +1,12 @@
 import { AppError } from '../middleware/errorHandler.js';
 import { prisma } from '../prisma.js';
-import { encrypt, decrypt } from '../helpers.js';
+import {encrypt, decrypt, getTokenPayload} from '../helpers.js';
 import mysql from 'mysql2/promise';
 
 // Create User
 export const createUser = async (req, res, next) => {
   try {
-    const { kode_pegawai, password, role } = req.body;
+    const { kode_pegawai, password, role_id} = req.body;
 
     // Encrypt password sebelum disimpan
     const encryptedPassword = encrypt(password);
@@ -16,11 +16,11 @@ export const createUser = async (req, res, next) => {
       data: {
         kode_pegawai,
         password: encryptedPassword, // Simpan password yang sudah dienkripsi
-        role,
+        role_id: parseInt(role_id), // Simpan role_id
       },
     });
 
-    res.status(201).json({ message: 'User created successfully', user: newUser });
+    res.status(201).json({ message: 'Berhasil menambahkan pengguna', user: newUser });
   } catch (error) {
     next(error);
   }
@@ -33,7 +33,7 @@ export const getAllUsers = async (req, res, next) => {
       select: {
         id: true,
         kode_pegawai: true,
-        role: true,
+        role_id: true,
       },
     });
 
@@ -53,12 +53,12 @@ export const getUserById = async (req, res, next) => {
       select: {
         id: true,
         kode_pegawai: true,
-        role: true,
+        role_id: true,
       },
     });
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: 'Pengguna tidak ditemukan' });
     }
 
     res.status(200).json(user);
@@ -71,7 +71,7 @@ export const getUserById = async (req, res, next) => {
 export const updateUser = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { kode_pegawai, password, role } = req.body;
+    const { kode_pegawai, password, role_id } = req.body;
 
     // Cek apakah user ada
     const existingUser = await prisma.users.findUnique({
@@ -79,7 +79,7 @@ export const updateUser = async (req, res, next) => {
     });
 
     if (!existingUser) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: 'Pengguna tidak ditemukan' });
     }
 
     // Encrypt password jika ada
@@ -91,11 +91,11 @@ export const updateUser = async (req, res, next) => {
       data: {
         kode_pegawai,
         password: encryptedPassword, // Simpan password yang sudah dienkripsi
-        role,
+        role_id,
       },
     });
 
-    res.status(200).json({ message: 'User updated successfully', user: updatedUser });
+    res.status(200).json({ message: 'User berhasil diperbarui', user: updatedUser });
   } catch (error) {
     next(error);
   }
@@ -112,7 +112,7 @@ export const deleteUser = async (req, res, next) => {
     });
 
     if (!existingUser) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: 'Pengguna tidak ditemukan' });
     }
 
     // Hapus user
@@ -120,11 +120,54 @@ export const deleteUser = async (req, res, next) => {
       where: { id: parseInt(id) },
     });
 
-    res.status(200).json({ message: 'User deleted successfully' });
+    res.status(200).json({ message: 'Pengguna berhasil dihapus' });
   } catch (error) {
     next(error);
   }
 };
+
+export const getUserRoles = async (req, res, next) => {
+    try {
+        const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
+
+        const login_account = await prisma.users.findFirst({
+            where: {
+              id: parseInt(decoded.userId),
+            },
+            include: {
+              roles: true
+            }
+        });
+
+        const account_list = await prisma.users.findMany({
+            where: {
+                AND: [
+                    { kode_pegawai: parseInt(login_account.kode_pegawai) },
+                    { NOT: [{ id: login_account.id }] },
+                ]
+            },
+            include: {
+              roles: true
+            }
+        });
+
+        const { roles: login_roles, ...rest } = login_account;
+
+        const roles_list = account_list.map((account) => {
+            const { roles, ...rest } = account;
+            return roles;
+        });
+
+        const result = {
+          login_role: login_roles,
+          another_role: roles_list,
+        };
+
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+}
 
 export const fillRole = async (req, res, next) => {
   try {

@@ -3,6 +3,10 @@ import { config } from './config/index.js';
 import { AppError } from './middleware/errorHandler.js';
 import ejs from 'ejs';
 import wkhtmltopdf from 'wkhtmltopdf';
+import {JWTService} from "./services/jwt.service.js";
+import {prisma} from "./prisma.js";
+import res from "express/lib/response.js";
+
 
 const algorithm = 'aes-256-cbc';
 const secret = config.secretKey;
@@ -79,3 +83,30 @@ export const printPdf = async (res, data, templatePath, orientation = 'Portrait'
         res.status(500).send(`Error generating PDF: ${error.message}`);
     }
 };
+
+export const getTokenPayload = async (req) => {
+    const token = req.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
+    const decoded = JWTService.decodeToken(token);
+    const semester = await prisma.ref_semester.findFirst({
+        where: { id: parseInt(decoded.semester) },
+    });
+
+    if (!semester) {
+        return res.status(400).json({ message: "Invalid token: Missing semester" });
+    }
+
+    // Ambil tahun ajaran aktif
+    const tahunAjaran = await prisma.ref_tahun_ajaran.findFirst({
+        where: { id: semester.id_tahun_ajaran },
+    });
+    if (!tahunAjaran) {
+        return res.status(404).json({ message: "Academic year not found" });
+    }
+
+    return { decoded, semester, tahunAjaran };
+
+}

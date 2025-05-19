@@ -4,10 +4,11 @@ import { encrypt, decrypt, trimmedString } from "../helpers.js";
 import { prisma } from "../prisma.js";
 import { get } from "mongoose";
 import { EjsHelpers } from "../ejs_helpers.js";
-import { tipe_master_kategori } from "@prisma/client";
+import { ref_master_kategori_tipe } from "@prisma/client";
+// import { tipe_master_kategori } from "@prisma/client";
 
 export class MasterKategoriController {
-    static allowedTypes = Object.values(tipe_master_kategori);
+    static allowedTypes = Object.values(ref_master_kategori_tipe);
 
     static createMasterKategori = async (req, res, next) => {
         try{

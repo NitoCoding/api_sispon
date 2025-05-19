@@ -2,11 +2,27 @@ import { AppError } from "../middleware/errorHandler.js";
 import { prisma } from "../prisma.js";
 
 export class DataTagihanSantriController {
-	static async getTagihan(req,res,next){
+	static async getDataTagihanSantri(req,res,next){
 		try{
-			
-		}catch{
+            const { id_santri } = req.params;
+            const tagihan = await prisma.data_tagihan_santri.findMany({
+				where: {
+					id_santri: parseInt(id_santri),
+				},
+				include: {
+					ref_jenis_tagihan_santri: true,
+					santri: true,
+					data_tagihan_santri_potongan: true,
+				},
+			});
 
+			return res.status(200).json({
+				success: true,
+				message: "Data tagihan santri berhasil diambil",
+				data: tagihan,	
+			})
+		}catch{
+            next(new AppError(error.message, 500));
 		}
 	}
 

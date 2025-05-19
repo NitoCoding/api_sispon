@@ -1,6 +1,6 @@
 import express from 'express';
 const router = express.Router();
-import { authenticate } from '../middleware/auth.middleware.js';
+import { authenticate, checkPermission } from '../middleware/auth.middleware.js';
 import { RoleController } from '../controllers/role.controller.js';
 
 // Apply authentication middleware to all routes

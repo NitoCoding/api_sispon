@@ -8,3 +8,4 @@ prisma
 *.log
 package-lock.json
 temp
+Daily

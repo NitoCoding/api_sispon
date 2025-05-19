@@ -41,7 +41,7 @@ app.get('/health', async (req, res) => {
   const dbConnection = await checkDatabaseConnection();
   if (!dbConnection) {
     return res.status(500).json({ status: 'error', message: 'Database connection failed' });
-
+    
   }
   // Example: Check cache connection
   res.status(200).json({ status: 'ok' });
@@ -64,7 +64,8 @@ const __dirname = dirname(__filename);
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 app.use('/images', express.static(path.join(__dirname, '../public/pdf_template/images')));
 
-// API Routes
+import * as path from "node:path";
+// // API Routes
 import userRoutes from './routes/user.route.js';
 import authRoutes from './routes/auth.route.js';
 import guru_pegawaiRoutes from "./routes/guru_pegawai.route.js";
@@ -75,7 +76,6 @@ import kelasRoutes from './routes/kelas.route.js'
 import semesterRoutes from './routes/semester.route.js'
 import rombelAnggotaRoutes from './routes/rombel_anggota.route.js'
 import KurikulumRoutes from './routes/kurikulum.route.js'
-import * as path from "node:path";
 import ktiRoutes from "./routes/kti.route.js";
 
 import masterKategoriRoutes from './routes/master_kategori.route.js';
@@ -87,6 +87,9 @@ import beasiswaRouter from "./routes/beasiswa.route.js";
 import beasiswsSantriRouter from "./routes/beasiswa_santri.route.js";
 
 import tagihanSantriRouter from "./routes/tagihan_santri.route.js";
+import SkemaTagihanRouter  from './routes/skema_tagihan.route.js';
+import dataTagihanRouter from "./routes/data_tagihan.route.js";
+import coaRouter from './routes/coa.route.js';
 
 
 app.use('/auth', authRoutes);
@@ -112,7 +115,15 @@ app.use('/beasiswa-santris', beasiswsSantriRouter)
 app.use('/prestasi-pelanggarans', prestasiPelanggaranRoute);
 
 app.use('/tagihan', tagihanSantriRouter)
+app.use('/skema-tagihan',SkemaTagihanRouter)
+app.use('/data-tagihan-santri', dataTagihanRouter)
+app.use('/coa', coaRouter);
+
 // Error handling
+// import loadRoutes from './loadRoutes.js';
+// loadRoutes(app)
+
+
 app.use(errorHandler);
 
 // Handle unhandled routes
@@ -123,11 +134,28 @@ app.use('*', (req, res) => {
   });
 });
 
-// Start server
-const PORT = config.port;
-// console.log(config)
-app.listen(PORT, () => {
-  logger.info(`Server is running on port ${PORT}`);
+// import loadRoutes from './loadRoutes.js';
+
+app.listen(config.port, () => {
+  logger.info(`Server is running on port ${config.port}`);
 });
 
-export default app;
+// // Start server
+// // const PORT = config.port;
+// // console.log(config)
+// // app.listen(PORT, () => {
+// //   logger.info(`Server is running on port ${PORT}`);
+// // });
+// async function startServer() {
+//   try {
+//     await loadRoutes(app); // Pass the app instance to mount routes
+//     const PORT = config.port;
+//     app.listen(PORT, () => {
+//       console.log(`Server is running on port ${PORT}`);
+//     });
+//   } catch (err) {
+//     console.error('Error starting server:', err);
+//   }
+// }
+
+// startServer();

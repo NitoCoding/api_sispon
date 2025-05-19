@@ -7,7 +7,7 @@ const router = express.Router();
 
 // router.use('tagihan_santri', router)
 
-router.get('/', DataTagihanSantriController.getDataTagihanSantri)
+router.get('/:id_santri', DataTagihanSantriController.getDataTagihanSantri)
 // router.post('/', )
 
 export default router;

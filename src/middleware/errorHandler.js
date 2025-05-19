@@ -16,24 +16,40 @@ export const errorHandler = (err, req, res, next) => {
   err.status = err.status || 'error';
 
   // Log the error
-  logger.error('Error:', {
+  // logger.error('Error:', {
+  //   message: err.message,
+  //   stack: err.stack,
+  //   statusCode: err.statusCode,
+  // });
+
+    const errorDetails = {
     message: err.message,
     stack: err.stack,
-    statusCode: err.statusCode
-  });
+    statusCode: err.statusCode,
+    path: req.originalUrl,
+    method: req.method,
+    ip: req.ip,
+    timestamp: new Date().toISOString()
+  };
+
+  // Log the error with more context
+  logger.error('Error:', errorDetails);
 
   if (process.env.NODE_ENV === 'development') {
     res.status(err.statusCode).json({
       status: err.status,
       error: err,
       message: err.message,
-      stack: err.stack
+      stack: err.stack,
+      path: req.originalUrl,
+      method: req.method
     });
   } else {
     // Production: don't leak error details
     res.status(err.statusCode).json({
       status: err.status,
-      message: err.isOperational ? err.message : 'Something went wrong!'
+      message: err.isOperational ? err.message : 'Something went wrong!',
+      path: req.originalUrl
     });
   }
 };

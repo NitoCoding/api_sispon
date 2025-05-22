@@ -8,6 +8,8 @@ router.use(authenticate)
 
 router.get('/', BeasiswaSantriController.getBeasiswaSantri);
 router.post('/', BeasiswaSantriController.createBeasiswaSantri);
+router.put('/:id/confirm', BeasiswaSantriController.applyBeasiswaPotonganbyId);
+router.get('/list-potongan', BeasiswaSantriController.getPotonganBeasiswa);
 router.put('/:id', BeasiswaSantriController.updateBeasiswaSantri);
 router.delete('/:id', BeasiswaSantriController.deleteBeasiswaSantri);
 

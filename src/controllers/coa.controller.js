@@ -4,7 +4,12 @@ import { prisma } from "../prisma.js";
 export class CoaController {
     static getCoa = async (req, res, next) => {
         try {
-            const coa = await prisma.coa.findMany();
+            const coa = await prisma.coa.findMany({
+                orderBy: {
+                    kode: "asc",
+                    parent_id: "asc"
+                }
+            });
 
             return res.status(200).json({
                 success: true,

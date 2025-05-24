@@ -348,4 +348,61 @@ export class DataTagihanSantriController {
       next(new AppError(error.message, error.statusCode || 500));
     }
   }
+
+  static async allowAccessTallum(req,res,next){
+    try {
+      const {nis_santri} = req.params;
+      const santri = await prisma.data_santri.findFirst({
+        where: {
+          nis_santri,
+        },
+      });
+
+      if (!santri) {
+        return next(new AppError("Santri tidak ditemukan", 404));
+      }
+
+      const tagihan = await prisma.data_tagihan_santri.findFirst({
+        where: {
+          id_santri: santri.id,
+          status: STATUS.TAGIHAN_BELUM_LUNAS,
+        },
+        skip: 1,
+      });
+
+      const today = new Date();
+      const tanggalJatuhTempo = new Date(tagihan.tanggal_jatuh_tempo);
+
+      // get month as number
+      // value of today.getMonth() is 0 for january, 1 for february, 2 for march, and so on
+      // value of tanggalJatuhTempo.getMonth() is 0 for january, 1 for february, 2 for march, and so on
+
+      // for example today is 25 may 2025 and tanggalJatuhTempo is 25 april 2025
+      // today.getMonth() is 4
+      // tanggalJatuhTempo.getMonth() is 3
+      // tanggalJatuhTempo.getMonth() - today.getMonth() is 1
+      // tanggalJatuhTempo.getMonth() - today.getMonth() > 1 is true
+
+      if(tanggalJatuhTempo.getMonth() - today.getMonth() >= 2){
+        return res.status(200).json({
+          success: true,
+          message: "Santri tidak dapat mengakses tallum",
+          data: {
+            allowed : false,
+          },
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Santri dapat mengakses tallum",
+        data: {
+          allowed : true,
+        },
+      }); // true or fals
+
+    }catch(error){
+      next(new AppError(error.message, error.statusCode || 500));
+    }
+  }
 }

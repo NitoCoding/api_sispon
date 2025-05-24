@@ -107,6 +107,10 @@ export const getTokenPayload = async (req) => {
         return res.status(404).json({ message: "Academic year not found" });
     }
 
-    return { decoded, semester, tahunAjaran };
+    const user = await prisma.users.findFirst({
+        where: { id: parseInt(decoded.userId) },
+    });
+
+    return { decoded, semester, tahunAjaran, user };
 
 }

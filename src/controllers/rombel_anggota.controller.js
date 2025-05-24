@@ -1,5 +1,6 @@
 import { prisma } from '../prisma.js';
 import {JWTService} from "../services/jwt.service.js";
+import {getTokenPayload} from "../helpers.js";
 
 export class RombelAnggotaController {
     static async createRombelAnggota(req, res, next) {
@@ -8,6 +9,8 @@ export class RombelAnggotaController {
             const { id_rombel, id_santri } = req.body;
             const id_santri_list = Array.isArray(id_santri) ? id_santri : [id_santri];
 
+            let count = 0;
+
             for (const id of id_santri_list) {
                 const newAnggota = await prisma.data_rombel_anggota.create({
                     data: {
@@ -15,9 +18,50 @@ export class RombelAnggotaController {
                         id_santri: parseInt(id),
                     },
                 });
+                count++;
             }
 
-            res.status(201).json({"message": "Anggota added successfully"});
+            res.status(201).json({"message": `${count} Siswa berhasil dimasukkan ke rombel`});
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async getRiwayatSantri(req, res, next) {
+        try {
+            const { id_santri } = req.params;
+
+            const riwayat = await prisma.data_rombel_anggota.findMany({
+                where: {
+                    id_santri: parseInt(id_santri),
+                },
+                include: {
+                    data_rombel: {
+                        include: {
+                            ref_kelas: true,
+                            ref_tahun_ajaran: true,
+                        },
+                    },
+                },
+                orderBy: {
+                    data_rombel: {
+                        ref_kelas: {
+                            id_tingkat: "desc"
+                        }
+                    }
+                }
+            });
+
+            const mappedRiwayat = riwayat.map((item) => {
+                const { data_rombel, ...rest } = item;
+                return {
+                    ...rest,
+                    kelas: data_rombel.ref_kelas.kelas,
+                    tahun_ajaran: data_rombel.ref_tahun_ajaran.nama,
+                };
+            });
+
+            res.status(200).json(mappedRiwayat);
         } catch (error) {
             next(error);
         }
@@ -62,8 +106,8 @@ export class RombelAnggotaController {
             for (const class_item of class_list) {
                 const rombel = await prisma.data_rombel.findMany({
                     where: {
-                        nama: class_item.kelas,
                         id_tahun_ajaran: semester.id_tahun_ajaran,
+                        id_kelas: class_item.id,
                     },
                 });
                 if (rombel.length === 0 || !rombel) {
@@ -72,8 +116,7 @@ export class RombelAnggotaController {
                             id_kelas: class_item.id,
                             id_tahun_ajaran: semester.id_tahun_ajaran,
                             id_wali_kelas: null,
-                            nama: class_item.kelas,
-                            status: 'aktif',
+                            id_status: 13
                         },
                     });
                 }

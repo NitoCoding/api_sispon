@@ -7,10 +7,14 @@ import { authenticate } from '../middleware/auth.middleware.js';
 import {
     createRombel,
     deleteRombel,
-    getAllRombel,
+    getAllRombel, getAllWaliKelasRombel,
     getRombelById,
-    updateRombel
+    updateRombel, updateWaliKelas
 } from "../controllers/rombel.controller.js";
+import {upload} from "../middleware/upload.middleware.js";
+
+router.put('/wali-kelas', authenticate, upload.single("foto_ttd"), updateWaliKelas);
+router.get('/wali-kelas', authenticate, getAllWaliKelasRombel);
 
 router.post('/', authenticate, createRombel);
 router.get('/', authenticate, getAllRombel);

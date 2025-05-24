@@ -1,5 +1,11 @@
 import { prisma } from "../prisma.js";
 
+/*
+Master Kategori Ref Ekskul:
+1. Akademik
+2. Non Akademik
+ */
+
 export class EkskulController {
     static createEkskul = async (req, res, next) => {
         try {
@@ -50,26 +56,43 @@ export class EkskulController {
 
     static getAllEkskul = async (req, res, next) => {
         try {
-            const { ekskul_master_ids } = await prisma.ref_master_kategori.findMany({
+            const { kategori } = req.query;
+
+            const ekskulCategories = await prisma.ref_master_kategori.findMany({
                 where: {
-                    tipe: "ekskul"
-                }
+                    tipe: "ekskul",
+                },
+                select: {
+                    id: true,
+                },
             });
+
+            const ekskul_master_ids = ekskulCategories.map((category) => category.id);
+
+            let whereClause = {
+                id_master_kategori_ref_mapel: {
+                    in: ekskul_master_ids,
+                },
+            };
+
+            if (kategori) {
+                if (isNaN(parseInt(kategori))) {
+                    return res.status(400).json({ message: "Kategori harus berupa angka" });
+                }
+                whereClause = {
+                    ...whereClause,
+                    id_master_kategori_ref_mapel: parseInt(kategori),
+                };
+            }
+
             const mapels = await prisma.ref_mapel.findMany({
-                where: {
-                    id_master_kategori: {
-                        in: ekskul_master_ids
-                    }
-                },
-                include: {
-                    ref_master_kategori: true,
-                },
-                orderBy: { id: 'asc' }
+                where: whereClause,
+                orderBy: { id: "asc" },
             });
 
             res.status(200).json(mapels);
-        }
-        catch (error) {
+        } catch (error) {
+            console.error(error); // Log error untuk debugging
             next(error);
         }
     };

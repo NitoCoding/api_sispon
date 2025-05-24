@@ -1,7 +1,18 @@
 import {JWTService} from "../services/jwt.service.js";
 
 import { prisma } from "../prisma.js";
-import {getTokenPayload} from "../helpers.js";
+import {getTokenPayload, printPdf} from "../helpers.js";
+import path from "path";
+import {fileURLToPath} from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/*
+basis_lokasi_prestasi_pelanggaran:
+25. Asrama
+26. Sekolah
+ */
 
 export class PrestasiPelanggaranController {
     static createPrestasiPelanggaran = async (req, res, next) => {
@@ -15,7 +26,7 @@ export class PrestasiPelanggaranController {
                 tempat,
                 deskripsi,
                 resolusi,
-                tipe_pelanggaran
+                id_basis_lokasi
             } = JSON.parse(req.body.data);
 
             const file_bukti = req.files;
@@ -25,8 +36,6 @@ export class PrestasiPelanggaranController {
             for (const file of file_bukti) {
                 file_bukti_list.push(`/uploads/bukti-prpl/${perihal === 'prestasi' ? 'prestasi' : 'pelanggaran'}/${file.filename}`);
             }
-
-            console.log(file_bukti_list);
 
             // Validasi input
             if (!id_santri || !perihal || !judul || !tempat || !deskripsi ) {
@@ -64,7 +73,7 @@ export class PrestasiPelanggaranController {
                     deskripsi,
                     bukti: file_bukti_list.toString(),
                     resolusi: resolusi || null,
-                    tipe_pelanggaran
+                    id_basis_lokasi: parseInt(id_basis_lokasi)
                 }
             });
 
@@ -79,9 +88,15 @@ export class PrestasiPelanggaranController {
             const { groupbyclass, class: className, type, cat } = req.query;
             const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
 
+            const ref_kelas = await prisma.ref_kelas.findFirst({
+                where: {
+                    kelas: className,
+                }
+            });
+
             const whereClause = { id_tahun_ajaran: tahunAjaran.id };
             if (className) {
-                whereClause["nama"] = className;
+                whereClause["id_kelas"] = parseInt(ref_kelas.id);
             }
 
             // Fetch rombel data with members
@@ -92,7 +107,8 @@ export class PrestasiPelanggaranController {
                         select: {
                             id_santri: true
                         }
-                    }
+                    },
+                    ref_kelas: true
                 }
             });
 
@@ -118,7 +134,11 @@ export class PrestasiPelanggaranController {
 
                 // Filter by type (all, asrama, sekolah)
                 if (type && type !== 'all') {
-                    prestasiPelanggaranWhere.tipe_prestasi_pelanggaran = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+                    if (type === 'asrama') {
+                        prestasiPelanggaranWhere.id_basis_lokasi = 25;
+                    } else if (type === 'sekolah') {
+                        prestasiPelanggaranWhere.id_basis_lokasi = 26;
+                    }
                 }
 
                 // Filter by category (pr for prestasi, pl for pelanggaran)
@@ -131,6 +151,9 @@ export class PrestasiPelanggaranController {
                 // Fetch prestasi/pelanggaran data
                 const prestasiPelanggaranList = await prisma.data_prestasi_pelanggaran.findMany({
                     where: prestasiPelanggaranWhere,
+                    include: {
+                        ref_master_kategori: true
+                    }
                 });
 
                 // Group prestasi/pelanggaran by student
@@ -146,7 +169,7 @@ export class PrestasiPelanggaranController {
                         tanggal: item.tanggal,
                         tempat: item.tempat,
                         deskripsi: item.deskripsi,
-                        tipe: item.tipe_pelanggaran,
+                        tipe: item.ref_master_kategori ? item.ref_master_kategori.nama : null,
                         bukti: item.bukti,
                         resolusi: item.resolusi
                     });
@@ -166,7 +189,7 @@ export class PrestasiPelanggaranController {
 
                 santriData.push({
                     class_id: rombel.id,
-                    class: rombel.nama,
+                    class: rombel.ref_kelas.kelas,
                     students: simplifiedStudents
                 });
             }
@@ -185,7 +208,88 @@ export class PrestasiPelanggaranController {
                 return res.status(200).json(flatList);
             }
         } catch (error) {
-            console.error(error);
+            next(error);
+        }
+    };
+
+    static getPrestasiSantri = async (req, res, next) => {
+        try {
+            const { id_santri } = req.params; // Mengambil id_santri dari parameter URL
+            const { type, cat } = req.query; // Mengambil filter type dan category dari query
+            const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
+
+            // Validasi id_santri
+            if (!id_santri) {
+                return res.status(400).json({ message: "ID santri diperlukan" });
+            }
+
+            // Fetch data santri
+            const santri = await prisma.santri.findUnique({
+                where: { id: parseInt(id_santri) },
+                select: { id: true, nis: true, nama: true }
+            });
+
+            if (!santri) {
+                return res.status(404).json({ message: "Santri tidak ditemukan" });
+            }
+
+            // Build where clause untuk prestasi/pelanggaran
+            const prestasiPelanggaranWhere = {
+                id_santri: parseInt(id_santri),
+                id_tahun_ajaran: tahunAjaran.id
+            };
+
+            // Filter berdasarkan type (all, asrama, sekolah)
+            if (type && type !== 'all') {
+                if (type === 'asrama') {
+                    prestasiPelanggaranWhere.id_basis_lokasi = 25;
+                } else if (type === 'sekolah') {
+                    prestasiPelanggaranWhere.id_basis_lokasi = 26;
+                }
+            }
+
+            // Filter berdasarkan category (prestasi atau pelanggaran)
+            if (cat === 'pr') {
+                prestasiPelanggaranWhere.perihal = 'prestasi';
+            } else if (cat === 'pl') {
+                prestasiPelanggaranWhere.perihal = 'pelanggaran';
+            }
+
+            // Fetch data prestasi/pelanggaran
+            const prestasiPelanggaranList = await prisma.data_prestasi_pelanggaran.findMany({
+                where: prestasiPelanggaranWhere,
+                include: {
+                    ref_master_kategori: true
+                },
+                orderBy: {
+                    tanggal: 'desc' // Urutkan berdasarkan tanggal terbaru
+                }
+            });
+
+            // Format data prestasi/pelanggaran
+            const formattedPrestasiPelanggaran = prestasiPelanggaranList.map(item => ({
+                id: item.id,
+                perihal: item.perihal,
+                judul: item.judul,
+                capaian: item.capaian,
+                tanggal: item.tanggal,
+                tempat: item.tempat,
+                deskripsi: item.deskripsi,
+                tipe: item.ref_master_kategori ? item.ref_master_kategori.nama : null,
+                bukti: item.bukti,
+                resolusi: item.resolusi
+            }));
+
+            // Format response
+            const response = {
+                id: santri.id,
+                nis: santri.nis,
+                nama: santri.nama,
+                prestasi_pelanggaran: formattedPrestasiPelanggaran
+            };
+
+            return res.status(200).json(response);
+        } catch (error) {
             next(error);
         }
     };
@@ -321,6 +425,162 @@ export class PrestasiPelanggaranController {
                 success: false,
                 message: error.message
             });
+        }
+    };
+
+    static printPrestasiPelanggaran = async (req, res, next) => {
+        try {
+            const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
+            const { month } = req.query; // month diharapkan dalam format angka (1-12)
+            const id_tahun_ajaran = tahunAjaran.id;
+
+            const tahunAjaranData = await prisma.ref_tahun_ajaran.findFirst({
+                where: {
+                    id: parseInt(id_tahun_ajaran)
+                }
+            });
+
+            // Build rombel where clause
+            const rombelWhereClause = { id_tahun_ajaran: parseInt(id_tahun_ajaran) };
+
+            // Fetch rombel data with members
+            const rombels = await prisma.data_rombel.findMany({
+                where: rombelWhereClause,
+                include: {
+                    data_rombel_anggota: {
+                        select: { id_santri: true },
+                    },
+                    ref_kelas: true,
+                },
+            });
+
+            if (rombels.length === 0) {
+                return res.status(200).json({ message: "Tidak ada data rombel untuk tahun ajaran ini" });
+            }
+
+            let santriData = [];
+
+            for (const rombel of rombels) {
+                const anggotaIds = rombel.data_rombel_anggota.map((anggota) => anggota.id_santri);
+
+                // Fetch santri data
+                const santriList = await prisma.santri.findMany({
+                    where: { id: { in: anggotaIds } },
+                    select: { id: true, nis: true, nama: true },
+                });
+
+                // Create santri map
+                const santriMap = santriList.reduce((acc, santri) => {
+                    acc[santri.id] = santri;
+                    return acc;
+                }, {});
+
+                // Build prestasi where clause (only prestasi)
+                let prestasiWhere = {
+                    id_santri: { in: anggotaIds },
+                    perihal: "prestasi",
+                };
+
+                // Fetch prestasi data
+                const prestasiList = await prisma.data_prestasi_pelanggaran.findMany({
+                    where: prestasiWhere,
+                    include: {
+                        ref_master_kategori: true,
+                    },
+                });
+
+                // Filter prestasi by month if provided
+                let filteredPrestasiList = prestasiList;
+                if (month) {
+                    const monthNum = parseInt(month);
+                    if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
+                        filteredPrestasiList = prestasiList.filter((item) => {
+                            if (item.tanggal) {
+                                // Asumsi tanggal disimpan dalam format Date atau string "DD-MM-YYYY"
+                                const date = new Date(item.tanggal);
+                                return date.getMonth() + 1 === monthNum; // getMonth() mengembalikan 0-11, jadi tambah 1
+                            }
+                            return false;
+                        });
+                    } else {
+                        console.warn("Invalid month provided:", month);
+                    }
+                }
+
+                // Group prestasi by student
+                const prestasiMap = filteredPrestasiList.reduce((acc, item) => {
+                    if (!acc[item.id_santri]) {
+                        acc[item.id_santri] = [];
+                    }
+                    acc[item.id_santri].push({
+                        perihal: item.perihal || "-",
+                        judul: item.judul || "-",
+                        capaian: item.capaian || "-",
+                        tanggal: item.tanggal ? new Date(item.tanggal).toLocaleDateString("id-ID") : "-",
+                        tempat: item.tempat || "-",
+                        deskripsi: item.deskripsi || "-",
+                        kategori: item.ref_master_kategori?.nama || "-",
+                        bukti: item.bukti || "-",
+                        resolusi: item.resolusi || "-",
+                    });
+                    return acc;
+                }, {});
+
+                // Create student list with prestasi data, only include students with prestasi
+                const simplifiedStudents = rombel.data_rombel_anggota
+                    .filter((anggota) => santriMap[anggota.id_santri] && prestasiMap[anggota.id_santri])
+                    .map((anggota) => ({
+                        nis: santriMap[anggota.id_santri].nis || "-",
+                        nama: santriMap[anggota.id_santri].nama || "-",
+                        kelas: rombel.ref_kelas?.kelas || "-",
+                        prestasi: prestasiMap[anggota.id_santri] || [],
+                    }));
+
+                santriData.push({
+                    class_id: rombel.id,
+                    class: rombel.ref_kelas?.kelas || "-",
+                    students: simplifiedStudents,
+                });
+            }
+
+            const mapBulan = {
+                1: "Januari",
+                2: "Februari",
+                3: "Maret",
+                4: "April",
+                5: "Mei",
+                6: "Juni",
+                7: "Juli",
+                8: "Agustus",
+                9: "September",
+                10: "Oktober",
+                11: "November",
+                12: "Desember"
+            };
+
+            // Prepare data for PDF
+            const pdfData = {
+                tahun_ajaran: tahunAjaranData.nama,
+                bulan: month ? "BULAN " + mapBulan[month].toUpperCase() : "",
+                classes: santriData.map((rombel) => ({
+                    class_id: rombel.class_id,
+                    class_name: rombel.class,
+                    students: rombel.students,
+                })),
+            };
+
+            // Define template path and PDF settings
+            const templatePath = path.join(__dirname, "../../public/pdf_template/daftar_prestasi_pelanggaran.ejs");
+            const orientation = "Landscape";
+            const filename = `Daftar_Prestasi_${tahunAjaranData.nama}.pdf`;
+
+            console.log(JSON.stringify(pdfData, null, 2));
+
+            // Generate and stream PDF
+            await printPdf(res, pdfData, templatePath, orientation, filename);
+        } catch (error) {
+            console.error("Error generating PDF:", error);
+            next(error);
         }
     };
 }

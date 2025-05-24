@@ -38,12 +38,18 @@ export class EkskulSantriController {
 
     static getAllEkskulSantri = async (req, res, next) => {
         try {
-            const { groupbyclass, class: className } = req.query;
+            const { groupbyclass, class: className, kategori } = req.query;
             const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
 
             const whereClause = { id_tahun_ajaran: tahunAjaran.id };
             if (className) {
-                whereClause["nama"] = className;
+                const ref_kelas = await prisma.ref_kelas.findFirst({
+                    where: { kelas: className },
+                });
+                if (!ref_kelas) {
+                    return res.status(404).json({ message: "Kelas tidak ditemukan" });
+                }
+                whereClause["id_kelas"] = ref_kelas.id;
             }
 
             // Fetch rombel data with members
@@ -52,21 +58,38 @@ export class EkskulSantriController {
                 include: {
                     data_rombel_anggota: {
                         select: {
-                            id_santri: true
-                        }
-                    }
-                }
+                            id_santri: true,
+                        },
+                    },
+                },
             });
+
+            // Ambil ID kategori ekskul
+            const ekskulCategories = await prisma.ref_master_kategori.findMany({
+                where: {
+                    tipe: "ekskul",
+                },
+                select: {
+                    id: true,
+                },
+            });
+
+            const ekskul_master_ids = ekskulCategories.map((category) => category.id);
+
+            // Jika tidak ada kategori ekskul, kembalikan array kosong
+            if (ekskul_master_ids.length === 0) {
+                return res.status(200).json([]);
+            }
 
             let santriData = [];
 
             for (const rombel of rombels) {
-                const anggotaIds = rombel.data_rombel_anggota.map(anggota => anggota.id_santri);
+                const anggotaIds = rombel.data_rombel_anggota.map((anggota) => anggota.id_santri);
 
                 // Fetch santri data for members
                 const santriList = await prisma.santri.findMany({
                     where: { id: { in: anggotaIds } },
-                    select: { id: true, nis: true, nama: true }
+                    select: { id: true, nis: true, nama: true },
                 });
 
                 // Create a map of santri ID to santri data
@@ -78,28 +101,34 @@ export class EkskulSantriController {
                 // Fetch extracurricular data for students in this rombel
                 const ekskulList = await prisma.data_eskul.findMany({
                     where: {
-                        id_santri: { in: anggotaIds }
+                        id_santri: { in: anggotaIds },
                     },
-                    select: {
-                        id: true,
-                        id_santri: true,
-                        id_mapel: true,
-                        tgl_masuk: true,
-                        tgl_keluar: true
-                    }
                 });
 
-                // Fetch mapel data for all id_mapel in ekskulList
-                const mapelIds = [...new Set(ekskulList.map(ekskul => ekskul.id_mapel))];
+                // Fetch mapel data for all id_mapel in ekskulList with kategori filter
+                const mapelIds = [...new Set(ekskulList.map((ekskul) => ekskul.id_mapel))];
+                let mapelWhereClause = {
+                    id: { in: mapelIds },
+                    id_master_kategori_ref_mapel: { in: ekskul_master_ids },
+                };
+
+                // Tambahkan filter kategori jika disediakan
+                if (kategori) {
+                    if (isNaN(parseInt(kategori))) {
+                        return res.status(400).json({ message: "Kategori harus berupa angka" });
+                    }
+                    mapelWhereClause = {
+                        ...mapelWhereClause,
+                        id_master_kategori_ref_mapel: parseInt(kategori),
+                    };
+                }
+
                 const mapelList = await prisma.ref_mapel.findMany({
-                    where: {
-                        id: { in: mapelIds },
-                        tipe: "extracurricular"
-                    },
+                    where: mapelWhereClause,
                     select: {
                         id: true,
-                        nama: true
-                    }
+                        nama: true,
+                    },
                 });
 
                 // Create a map of mapel ID to name
@@ -116,39 +145,39 @@ export class EkskulSantriController {
                     const ekskulName = mapelMap[ekskul.id_mapel] || "Unknown";
                     acc[ekskul.id_santri].push({
                         id: ekskul.id,
-                        nama: ekskulName
+                        nama: ekskulName,
                     });
                     return acc;
                 }, {});
 
                 // Create student list with extracurricular data
                 const simplifiedStudents = rombel.data_rombel_anggota
-                    .filter(anggota => santriMap[anggota.id_santri]) // Ensure santri exists
-                    .map(anggota => ({
+                    .filter((anggota) => santriMap[anggota.id_santri]) // Ensure santri exists
+                    .map((anggota) => ({
                         id: santriMap[anggota.id_santri].id,
                         nis: santriMap[anggota.id_santri].nis,
                         nama: santriMap[anggota.id_santri].nama,
                         kelas: rombel.nama,
-                        ekskul: ekskulMap[anggota.id_santri] || []
+                        ekskul: ekskulMap[anggota.id_santri] || [],
                     }));
 
                 santriData.push({
                     class_id: rombel.id,
                     class: rombel.nama,
-                    students: simplifiedStudents
+                    students: simplifiedStudents,
                 });
             }
 
             // Format final response
             if (groupbyclass === "true") {
-                const sortedData = santriData.map(rombel => {
+                const sortedData = santriData.map((rombel) => {
                     rombel.students.sort((a, b) => a.nama.localeCompare(b.nama));
                     return rombel;
                 });
                 return res.status(200).json(sortedData);
             } else {
                 const flatList = santriData
-                    .flatMap(item => item.students)
+                    .flatMap((item) => item.students)
                     .sort((a, b) => a.nama.localeCompare(b.nama));
                 return res.status(200).json(flatList);
             }

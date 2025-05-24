@@ -36,6 +36,9 @@ export class SemesterController {
         include: {
           ref_tahun_ajaran: true,
           ref_master_kategori_status_ref_semester: true
+        },
+        orderBy: {
+          id: 'desc'
         }
       });
 

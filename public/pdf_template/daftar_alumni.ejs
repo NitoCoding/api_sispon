@@ -78,7 +78,7 @@
     </div>
 
 
-    <h3 style="text-align: center; text-decoration: underline;">DAFTAR NAMA SANTRI PPMI SHOHWATUL IS'AD <%= data.kelas %></h3>
+    <h3 style="text-align: center; text-decoration: underline;">DAFTAR NAMA SANTRI ALUMNI PPMI SHOHWATUL IS'AD <%= data.tahun_ajaran %></h3>
 
     <table>
         <thead>
@@ -100,7 +100,7 @@
         </tr>
         </thead>
         <tbody>
-        <% data.santri.forEach((s, index) => { %>
+        <% data.alumni.forEach((s, index) => { %>
             <tr>
                 <td><%= index + 1 %></td>
                 <td><%= s.nisn %></td>

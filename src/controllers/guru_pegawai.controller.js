@@ -61,9 +61,58 @@ export const createGuruPegawai = async (req, res, next) => {
 // Get All Guru Pegawai
 export const getAllGuruPegawai = async (req, res, next) => {
     try {
-        const guruPegawai = await prisma.guru_pegawai.findMany();
+        const guruPegawai = await prisma.guru_pegawai.findMany({
+            orderBy: {
+                nama_gp: 'asc', // Sort by nama_gp in ascending order
+            },
+        });
+
+        if (guruPegawai.length === 0) {
+            return res.status(200).json({ message: "No guru_pegawai found", data: [] });
+        }
 
         res.status(200).json(guruPegawai);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getIsWaliGuruPegawai = async (req, res, next) => {
+    try {
+
+        const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
+
+        const guruPegawai = await prisma.guru_pegawai.findMany({
+            select: {
+                id: true,
+                nama_gp: true,
+            },
+        });
+
+        // Fetch all data_rombel records to get wali_kelas IDs in one query
+        const rombelWali = await prisma.data_rombel.findMany({
+            select: {
+                id_wali_kelas: true,
+            },
+            where: {
+                id_tahun_ajaran: semester.id_tahun_ajaran,
+            }
+        });
+
+        // Create a Set of id_wali_kelas for efficient lookup
+        const waliKelasIds = new Set(rombelWali.map((rombel) => rombel.id_wali_kelas));
+
+        // Map guru_pegawai to the desired response format
+        const waliList = guruPegawai
+            .map((guru) => ({
+                id: guru.id,
+                nama_gp: guru.nama_gp,
+                isWali: waliKelasIds.has(guru.id),
+            }))
+            .sort((a, b) => a.nama_gp.localeCompare(b.nama_gp));
+
+        // Return the response
+        return res.status(200).json(waliList);
     } catch (error) {
         next(error);
     }
@@ -75,7 +124,10 @@ export const getAllGuruPegawaiLogin = async (req, res, next) => {
             select: {
                 id: true,
                 nama_gp: true
-            }
+            },
+            orderBy: {
+                nama_gp: 'asc', // Sort by nama_gp in ascending order
+            },
         });
 
         res.status(200).json(guruPegawai);
@@ -84,7 +136,6 @@ export const getAllGuruPegawaiLogin = async (req, res, next) => {
     }
 };
 
-// Get Guru Pegawai by ID
 export const getGuruPegawaiById = async (req, res, next) => {
     try {
         const { id } = req.params;

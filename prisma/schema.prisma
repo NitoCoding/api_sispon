@@ -67,7 +67,7 @@ model santri {
   nisn                              String                      @db.VarChar(100)
   nis                               String                      @db.VarChar(100)
   nama                              String?                     @db.VarChar(100)
-  foto                              String?                     @db.VarChar(100)
+  foto                              String?                     @default("") @db.VarChar(100)
   jk                                santri_jk?
   tempat_ttl                        String?                     @db.VarChar(100)
   tgl_ttl                           DateTime?                   @db.Date
@@ -85,6 +85,7 @@ model santri {
   data_beasiswa_santri              data_beasiswa_santri[]
   data_eskul                        data_eskul[]
   data_nilai_eskul                  data_nilai_eskul[]
+  data_nilai_kelas                  data_nilai_kelas[]
   data_nilai_kti                    data_nilai_kti[]
   data_prestasi_pelanggaran         data_prestasi_pelanggaran[]
   data_rombel_anggota               data_rombel_anggota[]
@@ -266,6 +267,7 @@ model data_kelas {
   id_master_kategori_status_data_kelas                                                     Int?
   id_master_kategori_tipe_data_kelas                                                       Int?
   id_rombel                                                                                Int?
+  is_locked                                                                                Boolean?                 @default(false)
   data_absensi                                                                             data_absensi[]
   data_rombel                                                                              data_rombel?             @relation(fields: [id_rombel], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "data_kelas_ibfk_1")
   ref_mapel                                                                                ref_mapel?               @relation(fields: [id_mapel], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "data_kelas_ibfk_2")
@@ -327,28 +329,24 @@ model data_nilai_kelas {
   id_santri              Int
   nilai                  Decimal?               @db.Decimal(5, 2)
   created_at             DateTime?              @default(now()) @db.Timestamp(0)
-  id_kelas               Int?
-  id_semester            Int?
-  id_tahun_ajaran        Int?
   data_rencana_penilaian data_rencana_penilaian @relation(fields: [id_rencana], references: [id], onUpdate: Restrict, map: "data_nilai_kelas_ibfk_1")
+  santri                 santri                 @relation(fields: [id_santri], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "data_nilai_kelas_ibfk_2")
 
   @@index([id_rencana], map: "id_rencana")
+  @@index([id_santri], map: "data_nilai_kelas_ibfk_2")
 }
 
 model data_nilai_kti {
-  id               Int               @id @default(autoincrement())
-  id_santri        Int?
-  id_tahun_ajaran  Int?
-  id_semester      Int?
-  nilai            Int?
-  judul            String?           @db.VarChar(100)
-  santri           santri?           @relation(fields: [id_santri], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  ref_semester     ref_semester?     @relation(fields: [id_semester], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  ref_tahun_ajaran ref_tahun_ajaran? @relation(fields: [id_tahun_ajaran], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  id           Int           @id @default(autoincrement())
+  id_santri    Int?
+  id_semester  Int?
+  nilai        Int?
+  judul        String?       @db.VarChar(100)
+  santri       santri?       @relation(fields: [id_santri], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  ref_semester ref_semester? @relation(fields: [id_semester], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([id_santri], map: "data_nilai_kti_id_santri_fkey")
   @@index([id_semester], map: "data_nilai_kti_id_semester_fkey")
-  @@index([id_tahun_ajaran], map: "data_nilai_kti_id_tahun_ajaran_fkey")
 }
 
 model ref_departemen {
@@ -358,7 +356,7 @@ model ref_departemen {
   deskripsi String? @db.Text
 }
 
-model data_penilaian_karakter {
+model data_nilai_karakter {
   id                    Int                           @id @default(autoincrement())
   id_tahun_ajaran       Int
   bulan                 Int                           @db.TinyInt
@@ -379,21 +377,27 @@ model data_penilaian_karakter {
 }
 
 model data_rencana_penilaian {
-  id                 Int                @id @default(autoincrement())
-  id_kelas           Int
-  id_komponen        Int
-  nama               String             @db.VarChar(100)
-  pertemuan_ke       Int?
-  bobot              Int?               @default(0)
-  nilai_maksimum     Decimal?           @default(100.00) @db.Decimal(5, 2)
-  keterangan         String?            @db.Text
-  created_at         DateTime?          @default(now()) @db.Timestamp(0)
-  data_nilai_kelas   data_nilai_kelas[]
-  data_kelas         data_kelas         @relation(fields: [id_kelas], references: [id], onUpdate: Restrict, map: "data_rencana_penilaian_ibfk_1")
-  ref_komponen_nilai ref_komponen_nilai @relation(fields: [id_komponen], references: [id], onUpdate: Restrict, map: "data_rencana_penilaian_ibfk_2")
+  id                    Int                         @id @default(autoincrement())
+  id_kelas              Int
+  id_komponen           Int
+  nama                  String                      @db.VarChar(100)
+  bobot                 Int?                        @default(0)
+  nilai_maksimum        Decimal?                    @default(100.00) @db.Decimal(5, 2)
+  keterangan            String?                     @db.Text
+  created_at            DateTime?                   @default(now()) @db.Timestamp(0)
+  bulan                 Int
+  hari                  data_rencana_penilaian_hari
+  id_kd                 Int
+  pekan                 Int?
+  urutan                Int
+  data_nilai_kelas      data_nilai_kelas[]
+  data_kelas            data_kelas                  @relation(fields: [id_kelas], references: [id], onDelete: Cascade, map: "data_rencana_penilaian_ibfk_1")
+  ref_komponen_nilai    ref_komponen_nilai          @relation(fields: [id_komponen], references: [id], onUpdate: Restrict, map: "data_rencana_penilaian_ibfk_2")
+  data_kompetensi_dasar data_kompetensi_dasar       @relation(fields: [id_kd], references: [id], onUpdate: Restrict, map: "data_rencana_penilaian_ibfk_3")
 
   @@index([id_kelas], map: "id_kelas")
   @@index([id_komponen], map: "id_komponen")
+  @@index([id_kd], map: "data_rencana_penilaian_ibfk_3")
 }
 
 model data_rombel {
@@ -418,26 +422,17 @@ model data_rombel {
 
 model data_rombel_anggota {
   id                                             Int                  @id @default(autoincrement())
-  id_rombel                                      Int?
-  id_santri                                      Int?
+  id_rombel                                      Int
+  id_santri                                      Int
   created_at                                     DateTime?            @default(now()) @db.Timestamp(0)
   id_master_kategori_status_data_rombel_anggota  Int?
-  data_rombel                                    data_rombel?         @relation(fields: [id_rombel], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "data_rombel_anggota_data_rombel_FK")
+  data_rombel                                    data_rombel          @relation(fields: [id_rombel], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "data_rombel_anggota_data_rombel_FK")
   ref_master_kategori_status_data_rombel_anggota ref_master_kategori? @relation(fields: [id_master_kategori_status_data_rombel_anggota], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "data_rombel_anggota_ibfk_1")
-  santri                                         santri?              @relation(fields: [id_santri], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "data_rombel_anggota_ibfk_2")
+  santri                                         santri               @relation(fields: [id_santri], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "data_rombel_anggota_ibfk_2")
 
   @@index([id_rombel], map: "data_rombel_anggota_data_rombel_FK")
   @@index([id_master_kategori_status_data_rombel_anggota], map: "data_rombel_anggota_ibfk_1")
   @@index([id_santri], map: "data_rombel_anggota_ibfk_2")
-}
-
-model catatan_santri {
-  id           Int       @id @default(autoincrement())
-  id_santri    Int?
-  catatan      String?   @db.Text
-  tipe         String?   @db.VarChar(100)
-  id_semester  Int?
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
 }
 
 model guru_pegawai {
@@ -445,7 +440,7 @@ model guru_pegawai {
   nip                 String                @unique(map: "guru_pegawai_unique") @db.VarChar(35)
   tahun_terdaftar     Int?
   nama_gp             String?               @db.VarChar(100)
-  foto_gp             String?               @db.VarChar(100)
+  foto_gp             String?               @default("") @db.VarChar(100)
   jk                  String?               @db.Char(1)
   tempat_ttl          String?               @db.VarChar(100)
   tgl_ttl             DateTime?             @db.Date
@@ -459,7 +454,7 @@ model guru_pegawai {
   unit                String?               @db.VarChar(100)
   alamat              String?               @db.VarChar(100)
   telepon             String?               @db.VarChar(100)
-  foto_ttd            String?               @db.VarChar(100)
+  foto_ttd            String?               @default("") @db.VarChar(100)
   id_unit             Int?
   data_kelas_pengajar data_kelas_pengajar[]
   data_rombel         data_rombel[]
@@ -471,13 +466,6 @@ model guru_pegawai {
 
 model jabatan {
   id Int @id @default(autoincrement())
-}
-
-model ref_jam {
-  id           Int    @id @default(autoincrement())
-  jam          String @db.VarChar(11)
-  jml_jam      Int?
-  jumlah_menit Int?
 }
 
 model ref_karakter_kategori {
@@ -530,7 +518,8 @@ model ref_kriteria_karakter {
   nama                    String                    @db.VarChar(50)
   deskripsi               String?                   @db.Text
   id_basis_lokasi         Int?
-  data_penilaian_karakter data_penilaian_karakter[]
+  is_aktif                Boolean?                 @default(true)
+  data_penilaian_karakter data_nilai_karakter[]
   ref_karakter_kategori   ref_karakter_kategori     @relation(fields: [id_kategori], references: [id], onUpdate: Restrict, map: "ref_kriteria_karakter_ibfk_1")
   ref_master_kategori     ref_master_kategori?      @relation(fields: [id_basis_lokasi], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "ref_kriteria_karakter_ibfk_2")
 
@@ -549,7 +538,9 @@ model ref_master_kategori {
   data_kelas_data_kelas_id_master_kategori_tipe_data_kelasToref_master_kategori   data_kelas[]                   @relation("data_kelas_id_master_kategori_tipe_data_kelasToref_master_kategori")
   data_pendapatan_lain_data_pendapatan_lain_id_jenisToref_master_kategori         data_pendapatan_lain[]         @relation("data_pendapatan_lain_id_jenisToref_master_kategori")
   data_pendapatan_lain_data_pendapatan_lain_id_statusToref_master_kategori        data_pendapatan_lain[]         @relation("data_pendapatan_lain_id_statusToref_master_kategori")
-  data_penilaian_karakter                                                         data_penilaian_karakter[]
+  data_pengeluaran_lain_data_pengeluaran_lain_id_jenisToref_master_kategori         data_pengeluaran_lain[]         @relation("data_pengeluaran_lain_id_jenisToref_master_kategori")
+  data_pengeluaran_lain_data_pengeluaran_lain_id_statusToref_master_kategori        data_pengeluaran_lain[]         @relation("data_pengeluaran_lain_id_statusToref_master_kategori")
+  data_penilaian_karakter                                                         data_nilai_karakter[]
   data_prestasi_pelanggaran                                                       data_prestasi_pelanggaran[]
   data_rombel                                                                     data_rombel[]
   data_rombel_anggota                                                             data_rombel_anggota[]
@@ -563,17 +554,14 @@ model ref_master_kategori {
 }
 
 model ref_kurikulum {
-  id                    Int                     @id @default(autoincrement())
-  nama                  String?                 @db.VarChar(100)
-  misi                  String?                 @db.Text
-  visi                  String?                 @db.Text
-  id_jenjang            Int?
-  data_kkm_detail       data_kkm_detail[]
-  data_kompetensi_dasar data_kompetensi_dasar[]
-  data_kompetensi_inti  data_kompetensi_inti[]
-  ref_jenjang           ref_jenjang?            @relation(fields: [id_jenjang], references: [id], onUpdate: Restrict, map: "ref_kurikulum_ibfk_1")
-  ref_mapel             ref_mapel[]
-  ref_tingkat           ref_tingkat[]
+  id          Int           @id @default(autoincrement())
+  nama        String?       @db.VarChar(100)
+  misi        String?       @db.Text
+  visi        String?       @db.Text
+  id_jenjang  Int?
+  ref_jenjang ref_jenjang?  @relation(fields: [id_jenjang], references: [id], onUpdate: Restrict, map: "ref_kurikulum_ibfk_1")
+  ref_mapel   ref_mapel[]
+  ref_tingkat ref_tingkat[]
 
   @@index([id_jenjang], map: "ref_kurikulum_ibfk_1")
 }
@@ -640,7 +628,6 @@ model ref_tahun_ajaran {
   created_at                                  DateTime?            @default(now()) @db.Timestamp(0)
   id_master_kategori_status_ref_tahun_ajaran  Int?
   data_nilai_eskul                            data_nilai_eskul[]
-  data_nilai_kti                              data_nilai_kti[]
   data_rombel                                 data_rombel[]
   data_skema_tagihan                          data_skema_tagihan[]
   ref_semester                                ref_semester[]
@@ -662,17 +649,13 @@ model users {
 }
 
 model data_kkm_detail {
-  id            Int            @id @default(autoincrement())
-  kurikulum_id  Int?
-  mapel_id      Int
-  kkm           Int
-  tahun_ajaran  String?        @db.VarChar(9)
-  tingkat_id    Int
-  ref_mapel     ref_mapel      @relation(fields: [mapel_id], references: [id], onUpdate: Restrict, map: "data_kkm_detail_ref_mapel_FK")
-  ref_kurikulum ref_kurikulum? @relation(fields: [kurikulum_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "data_kkm_detail_ref_kurikulum_FK")
-  ref_tingkat   ref_tingkat    @relation(fields: [tingkat_id], references: [id], onUpdate: Restrict, map: "data_kkm_detail_ref_tingkat_FK")
+  id          Int         @id @default(autoincrement())
+  mapel_id    Int
+  kkm         Int
+  tingkat_id  Int
+  ref_mapel   ref_mapel   @relation(fields: [mapel_id], references: [id], onUpdate: Restrict, map: "data_kkm_detail_ref_mapel_FK")
+  ref_tingkat ref_tingkat @relation(fields: [tingkat_id], references: [id], onUpdate: Restrict, map: "data_kkm_detail_ref_tingkat_FK")
 
-  @@index([kurikulum_id], map: "data_kkm_detail_ref_kurikulum_FK")
   @@index([mapel_id], map: "data_kkm_detail_ref_mapel_FK")
   @@index([tingkat_id], map: "data_kkm_detail_ref_tingkat_FK")
 }
@@ -698,21 +681,19 @@ model data_prestasi_pelanggaran {
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model data_kompetensi_dasar {
-  id              Int                   @id @default(autoincrement())
-  id_kurikulum    Int?
-  id_mapel        Int
-  id_ki           Int?
-  kode_kd         String?               @db.VarChar(10)
-  deskripsi       String?               @db.Text
-  created_by      DateTime              @default(now()) @db.Timestamp(0)
-  id_tingkat      Int?
-  kompetensi_inti data_kompetensi_inti? @relation(fields: [id_ki], references: [id], onUpdate: Restrict)
-  kurikulum       ref_kurikulum?        @relation(fields: [id_kurikulum], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  mapel           ref_mapel             @relation(fields: [id_mapel], references: [id], onUpdate: Restrict)
-  ref_tingkat     ref_tingkat?          @relation(fields: [id_tingkat], references: [id], onUpdate: Restrict)
+  id                     Int                      @id @default(autoincrement())
+  id_mapel               Int
+  id_ki                  Int?
+  kode_kd                String?                  @db.VarChar(10)
+  deskripsi              String?                  @db.Text
+  created_by             DateTime                 @default(now()) @db.Timestamp(0)
+  id_tingkat             Int?
+  kompetensi_inti        data_kompetensi_inti?    @relation(fields: [id_ki], references: [id], onUpdate: Restrict)
+  mapel                  ref_mapel                @relation(fields: [id_mapel], references: [id], onUpdate: Restrict)
+  ref_tingkat            ref_tingkat?             @relation(fields: [id_tingkat], references: [id], onUpdate: Restrict)
+  data_rencana_penilaian data_rencana_penilaian[]
 
   @@index([id_ki], map: "data_kompetensi_dasar_id_ki_fkey")
-  @@index([id_kurikulum], map: "data_kompetensi_dasar_id_kurikulum_fkey")
   @@index([id_mapel], map: "data_kompetensi_dasar_id_mapel_fkey")
   @@index([id_tingkat], map: "data_kompetensi_dasar_id_tingkat_fkey")
 }
@@ -721,15 +702,12 @@ model data_kompetensi_inti {
   id               Int                       @id @default(autoincrement())
   created_by       DateTime                  @default(now()) @db.Timestamp(0)
   deskripsi        String?                   @db.Text
-  id_kurikulum     Int?
   kode_ki          String?                   @db.VarChar(10)
   kelompok         kelompok_kompetensi_inti?
   id_tingkat       Int?
   kompetensi_dasar data_kompetensi_dasar[]
-  kurikulum        ref_kurikulum?            @relation(fields: [id_kurikulum], references: [id], onDelete: Restrict, onUpdate: Restrict)
   ref_tingkat      ref_tingkat?              @relation(fields: [id_tingkat], references: [id], onUpdate: Restrict)
 
-  @@index([id_kurikulum], map: "data_kompetensi_inti_id_kurikulum_fkey")
   @@index([id_tingkat], map: "data_kompetensi_inti_id_tingkat_fkey")
 }
 
@@ -861,12 +839,13 @@ model coa_saldo {
 }
 
 model ref_jenjang {
-  id            Int             @id @default(autoincrement())
-  jenjang       String          @db.VarChar(100)
-  deskripsi     String?         @db.Text
-  ref_kurikulum ref_kurikulum[]
-  ref_tingkat   ref_tingkat[]
-  ref_unit      ref_unit[]
+  id                Int                 @id @default(autoincrement())
+  jenjang           String              @db.VarChar(100)
+  deskripsi         String?             @db.Text
+  ref_jam_pelajaran ref_jam_pelajaran[]
+  ref_kurikulum     ref_kurikulum[]
+  ref_tingkat       ref_tingkat[]
+  ref_unit          ref_unit[]
 }
 
 model ref_tingkat {
@@ -916,6 +895,48 @@ model data_pendapatan_lain {
 
   @@index([id_jenis], map: "data_pendapatan_lain_id_jenis_fkey")
   @@index([id_status], map: "data_pendapatan_lain_id_status_fkey")
+}
+
+model data_pengeluaran_lain {
+  id                                                                      Int                                     @id @default(autoincrement())
+  id_jenis                                                                Int
+  tanggal                                                                 DateTime                                @db.Date
+  nominal                                                                 Decimal                                 @db.Decimal(15, 2)
+  metode_pembayaran                                                       data_pendapatan_lain_metode_pembayaran?
+  keterangan                                                              String?                                 @db.Text
+  nomor_referensi                                                         String?                                 @db.VarChar(100)
+  id_status                                                               Int?
+  created_at                                                              DateTime                                @default(now()) @db.Timestamp(0)
+  updated_at                                                              DateTime?                               @db.Timestamp(0)
+  created_by                                                              String?                                 @db.VarChar(100)
+  updated_by                                                              String?                                 @db.VarChar(100)
+  ref_master_kategori_data_pengeluaran_lain_id_jenisToref_master_kategori  ref_master_kategori                     @relation("data_pengeluaran_lain_id_jenisToref_master_kategori", fields: [id_jenis], references: [id], onUpdate: Restrict)
+  ref_master_kategori_data_pengeluaran_lain_id_statusToref_master_kategori ref_master_kategori?                    @relation("data_pengeluaran_lain_id_statusToref_master_kategori", fields: [id_status], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([id_jenis], map: "data_pengeluaran_lain_id_jenis_fkey")
+  @@index([id_status], map: "data_pengeluaran_lain_id_status_fkey")
+}
+
+model data_roster {
+  id                Int               @id @default(autoincrement())
+  id_kelas          Int
+  hari              data_roster_hari
+  id_jam            Int
+  ref_jam_pelajaran ref_jam_pelajaran @relation(fields: [id_jam], references: [id], onUpdate: Restrict)
+
+  @@index([id_jam], map: "data_roster_id_jam_fkey")
+}
+
+model ref_jam_pelajaran {
+  id          Int           @id @default(autoincrement())
+  jam_ke      Int
+  jam_mulai   DateTime      @db.Time(0)
+  jam_selesai DateTime      @db.Time(0)
+  id_jenjang  Int
+  data_roster data_roster[]
+  ref_jenjang ref_jenjang   @relation(fields: [id_jenjang], references: [id])
+
+  @@index([id_jenjang])
 }
 
 /// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -1062,4 +1083,24 @@ enum ref_master_kategori_tipe {
   basis_lokasi_prestasi_pelanggaran
   basis_lokasi_data_penilaian_karakter
   kepesertaan_ekskul
+}
+
+enum data_roster_hari {
+  Senin
+  Selasa
+  Rabu
+  Kamis
+  Jumat
+  Sabtu
+  Ahad
+}
+
+enum data_rencana_penilaian_hari {
+  Senin
+  Selasa
+  Rabu
+  Kamis
+  Jumat
+  Sabtu
+  Ahad
 }

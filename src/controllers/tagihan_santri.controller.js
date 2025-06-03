@@ -1,7 +1,6 @@
 import { AppError } from "../middleware/errorHandler.js";
 import { prisma } from "../prisma.js";
 import { ref_jenis_tagihan_frekuensi } from "@prisma/client";
-import Joi from "joi";
 
 export class tagihanSantriController {
 	static frekuensiTypes = Object.values(ref_jenis_tagihan_frekuensi);

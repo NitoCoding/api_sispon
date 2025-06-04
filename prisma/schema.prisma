@@ -88,6 +88,7 @@ model santri {
   data_nilai_kelas                  data_nilai_kelas[]
   data_nilai_kti                    data_nilai_kti[]
   data_prestasi_pelanggaran         data_prestasi_pelanggaran[]
+  data_nilai_karakter               data_nilai_karakter[]
   data_rombel_anggota               data_rombel_anggota[]
   data_tagihan_santri               data_tagihan_santri[]
   ref_master_kategori_status_santri ref_master_kategori?        @relation(fields: [id_master_kategori_status_santri], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "santri_ibfk_1")
@@ -357,20 +358,22 @@ model ref_departemen {
 }
 
 model data_nilai_karakter {
-  id                    Int                           @id @default(autoincrement())
+  id                    Int                   @id @default(autoincrement())
   id_tahun_ajaran       Int
-  bulan                 Int                           @db.TinyInt
-  minggu                Int                           @db.TinyInt
+  bulan                 Int                   @db.TinyInt
+  minggu                Int                   @db.TinyInt
   id_santri             Int
   id_kriteria           Int
-  nilai                 data_penilaian_karakter_nilai
-  created_at            DateTime?                     @default(now()) @db.Timestamp(0)
-  updated_at            DateTime?                     @default(now()) @db.Timestamp(0)
-  id_semester           Int?
-  id_basis_lokasi       Int?
-  ref_kriteria_karakter ref_kriteria_karakter         @relation(fields: [id_kriteria], references: [id], onUpdate: Restrict, map: "data_penilaian_karakter_ibfk_1")
-  ref_master_kategori   ref_master_kategori?          @relation(fields: [id_basis_lokasi], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "data_penilaian_karakter_ibfk_2")
+  nilai                 Int
+  created_at            DateTime?             @default(now()) @db.Timestamp(0)
+  updated_at            DateTime?             @default(now()) @db.Timestamp(0)
+  id_semester           Int
+  id_basis_lokasi       Int
+  ref_kriteria_karakter ref_kriteria_karakter @relation(fields: [id_kriteria], references: [id], onUpdate: Restrict, map: "data_penilaian_karakter_ibfk_1")
+  ref_master_kategori   ref_master_kategori   @relation(fields: [id_basis_lokasi], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "data_penilaian_karakter_ibfk_2")
+  santri                santri                @relation(fields: [id_santri], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "data_penilaian_karakter_ibfk_3")
 
+  @@unique([id_santri, id_tahun_ajaran, id_semester, id_kriteria, id_basis_lokasi, bulan, minggu], map: "data_penilaian_karakter_unique")
   @@index([id_kriteria], map: "id_kriteria")
   @@index([id_santri, id_tahun_ajaran, id_semester, bulan, minggu], map: "indeks_siswa_periode")
   @@index([id_basis_lokasi], map: "data_penilaian_karakter_ibfk_2")
@@ -513,15 +516,15 @@ model ref_komponen_nilai {
 }
 
 model ref_kriteria_karakter {
-  id                      Int                       @id @default(autoincrement())
+  id                      Int                   @id @default(autoincrement())
   id_kategori             Int
-  nama                    String                    @db.VarChar(50)
-  deskripsi               String?                   @db.Text
+  nama                    String                @db.VarChar(50)
+  deskripsi               String?               @db.Text
   id_basis_lokasi         Int?
-  is_aktif                Boolean?                 @default(true)
+  is_aktif                Boolean?              @default(true)
   data_penilaian_karakter data_nilai_karakter[]
-  ref_karakter_kategori   ref_karakter_kategori     @relation(fields: [id_kategori], references: [id], onUpdate: Restrict, map: "ref_kriteria_karakter_ibfk_1")
-  ref_master_kategori     ref_master_kategori?      @relation(fields: [id_basis_lokasi], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "ref_kriteria_karakter_ibfk_2")
+  ref_karakter_kategori   ref_karakter_kategori @relation(fields: [id_kategori], references: [id], onUpdate: Restrict, map: "ref_kriteria_karakter_ibfk_1")
+  ref_master_kategori     ref_master_kategori?  @relation(fields: [id_basis_lokasi], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "ref_kriteria_karakter_ibfk_2")
 
   @@index([id_kategori], map: "id_kategori")
   @@index([id_basis_lokasi], map: "ref_kriteria_karakter_ibfk_2")
@@ -538,8 +541,8 @@ model ref_master_kategori {
   data_kelas_data_kelas_id_master_kategori_tipe_data_kelasToref_master_kategori   data_kelas[]                   @relation("data_kelas_id_master_kategori_tipe_data_kelasToref_master_kategori")
   data_pendapatan_lain_data_pendapatan_lain_id_jenisToref_master_kategori         data_pendapatan_lain[]         @relation("data_pendapatan_lain_id_jenisToref_master_kategori")
   data_pendapatan_lain_data_pendapatan_lain_id_statusToref_master_kategori        data_pendapatan_lain[]         @relation("data_pendapatan_lain_id_statusToref_master_kategori")
-  data_pengeluaran_lain_data_pengeluaran_lain_id_jenisToref_master_kategori         data_pengeluaran_lain[]         @relation("data_pengeluaran_lain_id_jenisToref_master_kategori")
-  data_pengeluaran_lain_data_pengeluaran_lain_id_statusToref_master_kategori        data_pengeluaran_lain[]         @relation("data_pengeluaran_lain_id_statusToref_master_kategori")
+  data_pengeluaran_lain_data_pengeluaran_lain_id_jenisToref_master_kategori       data_pengeluaran_lain[]        @relation("data_pengeluaran_lain_id_jenisToref_master_kategori")
+  data_pengeluaran_lain_data_pengeluaran_lain_id_statusToref_master_kategori      data_pengeluaran_lain[]        @relation("data_pengeluaran_lain_id_statusToref_master_kategori")
   data_penilaian_karakter                                                         data_nilai_karakter[]
   data_prestasi_pelanggaran                                                       data_prestasi_pelanggaran[]
   data_rombel                                                                     data_rombel[]
@@ -898,18 +901,18 @@ model data_pendapatan_lain {
 }
 
 model data_pengeluaran_lain {
-  id                                                                      Int                                     @id @default(autoincrement())
-  id_jenis                                                                Int
-  tanggal                                                                 DateTime                                @db.Date
-  nominal                                                                 Decimal                                 @db.Decimal(15, 2)
-  metode_pembayaran                                                       data_pendapatan_lain_metode_pembayaran?
-  keterangan                                                              String?                                 @db.Text
-  nomor_referensi                                                         String?                                 @db.VarChar(100)
-  id_status                                                               Int?
-  created_at                                                              DateTime                                @default(now()) @db.Timestamp(0)
-  updated_at                                                              DateTime?                               @db.Timestamp(0)
-  created_by                                                              String?                                 @db.VarChar(100)
-  updated_by                                                              String?                                 @db.VarChar(100)
+  id                                                                       Int                                     @id @default(autoincrement())
+  id_jenis                                                                 Int
+  tanggal                                                                  DateTime                                @db.Date
+  nominal                                                                  Decimal                                 @db.Decimal(15, 2)
+  metode_pembayaran                                                        data_pendapatan_lain_metode_pembayaran?
+  keterangan                                                               String?                                 @db.Text
+  nomor_referensi                                                          String?                                 @db.VarChar(100)
+  id_status                                                                Int?
+  created_at                                                               DateTime                                @default(now()) @db.Timestamp(0)
+  updated_at                                                               DateTime?                               @db.Timestamp(0)
+  created_by                                                               String?                                 @db.VarChar(100)
+  updated_by                                                               String?                                 @db.VarChar(100)
   ref_master_kategori_data_pengeluaran_lain_id_jenisToref_master_kategori  ref_master_kategori                     @relation("data_pengeluaran_lain_id_jenisToref_master_kategori", fields: [id_jenis], references: [id], onUpdate: Restrict)
   ref_master_kategori_data_pengeluaran_lain_id_statusToref_master_kategori ref_master_kategori?                    @relation("data_pengeluaran_lain_id_statusToref_master_kategori", fields: [id_status], references: [id], onDelete: Restrict, onUpdate: Restrict)
 

@@ -18,6 +18,7 @@ router.get('/', MasterKarakterController.getKriteriaKarakter);
 router.post('/', createKriteriaKarakterValidation, MasterKarakterController.createKriteriaKarakter);
 router.put('/:id',updateKriteriaKarakterValidation, MasterKarakterController.updateKriteriaKarakter);
 router.delete('/:id', paramValidation, MasterKarakterController.deleteKriteriaKarakter);
+router.post('/kategori-dan-kriteria', MasterKarakterController.createKategoriKarakterdanKriteria);
 
 
 export default router;

@@ -1,6 +1,13 @@
 import { AppError } from "../middleware/errorHandler.js";
 import { prisma } from "../prisma.js";
 
+const STATUS = {
+    TAGIHAN_BELUM_LUNAS: 17, //BELUM LUNAS
+    TAGIHAN_LUNAS: 18, //LUNAS
+    POTONGAN_APPLIED: 17, //DISETUJUI
+    POTONGAN_PENDING: 18, //DIPROSES
+};
+
 export class SkemaTagihanController {
     static getSkemaTagihan = async (req, res, next) => {
         try {
@@ -196,7 +203,7 @@ export class SkemaTagihanController {
                 }
             });
 
-            this.syncBeasiswaPotongan(res, next); // Tambahkan ini untuk memanggil fungsi syncBeasiswaPotongan setelah tagihan santri di-generate
+            await this.syncBeasiswaPotongan(next); // Tambahkan ini untuk memanggil fungsi syncBeasiswaPotongan setelah tagihan santri di-generate
 
             res.status(200).json({
                 success: true,
@@ -223,7 +230,7 @@ export class SkemaTagihanController {
     };
 
     // Fungsi untuk menambahkan potongan dengan status pending (lewati_verifikasi = false)
-    static async syncBeasiswaPotongan(res, next) {
+    static async syncBeasiswaPotongan(next) {
         try {
             const beasiswaList = await prisma.data_beasiswa_santri.findMany({
                 // where: { id: beasiswaId },

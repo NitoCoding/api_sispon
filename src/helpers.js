@@ -6,6 +6,12 @@ import wkhtmltopdf from 'wkhtmltopdf';
 import {JWTService} from "./services/jwt.service.js";
 import {prisma} from "./prisma.js";
 import res from "express/lib/response.js";
+import path, {dirname} from "path";
+import {fileURLToPath} from "url";
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 
 const algorithm = 'aes-256-cbc';
@@ -67,13 +73,15 @@ export const printPdf = async (res, data, templatePath, orientation = 'Portrait'
 
         // Configure wkhtmltopdf options
         const pdfOptions = {
-            output: null, // Stream output
+            output: null,
             pageSize: 'Folio',
             orientation: orientation,
-            marginTop: '10mm',
-            marginBottom: '20mm',
-            marginLeft: '15mm',
-            marginRight: '15mm',
+            marginTop: '1cm',
+            marginBottom: '2cm',
+            marginLeft: '1cm',
+            marginRight: '1cm',
+            enableLocalFileAccess: true,
+            // headerHtml: orientation === "Portrait"? path.join(__dirname, '../public/pdf_template/watermark-p.html') : path.join(__dirname, '../public/pdf_template/watermark-l.html'),
         };
 
         // Generate and stream PDF

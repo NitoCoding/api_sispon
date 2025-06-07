@@ -3,7 +3,7 @@ import { config } from '../config/index.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 export class JWTService {
-  static async generateToken(payload, expiresIn = '15m', secret = config.jwtSecret ) {
+  static async generateToken(payload, expiresIn = '7d', secret = config.jwtSecret ) {
     const secretKey = new TextEncoder().encode(secret);
 
     // return { accessToken, refreshToken };

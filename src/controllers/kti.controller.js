@@ -6,11 +6,20 @@ export class KtiController {
     static getAllKti = async (req, res, next) => {
         try {
             const { groupbyclass, class: className } = req.query;
-            const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
+            const { decoded, semester } = await getTokenPayload(req);
 
-            const whereClause = { id_tahun_ajaran: tahunAjaran.id };
+            // Validasi className jika diberikan
+            const whereClause = {
+                id_tahun_ajaran: semester.id_tahun_ajaran,
+            };
             if (className) {
-                whereClause["nama"] = className;
+                const ref_kelas = await prisma.ref_kelas.findFirst({
+                    where: { kelas: className },
+                });
+                if (!ref_kelas) {
+                    return res.status(404).json({ error: "Kelas tidak ditemukan" });
+                }
+                whereClause.id_kelas = ref_kelas.id;
             }
 
             // Ambil data rombel beserta anggota-anggotanya
@@ -18,49 +27,125 @@ export class KtiController {
                 where: whereClause,
                 include: {
                     data_rombel_anggota: true,
+                    ref_kelas: true,
                 },
             });
 
             let santriData = [];
-            let allAnggotaIds = new Set();
 
-            // Kumpulkan id santri dari rombel
+            // Proses setiap rombel
             for (const rombel of rombels) {
                 const anggotaIds = rombel.data_rombel_anggota.map((anggota) => anggota.id_santri);
-                anggotaIds.forEach((id) => allAnggotaIds.add(id));
 
+                // Jika rombel tidak memiliki anggota, tambahkan data kosong
+                if (anggotaIds.length === 0) {
+                    santriData.push({
+                        class_id: rombel.id,
+                        class: rombel.ref_kelas?.kelas || null,
+                        total_students: 0,
+                        students_without_grades: 0,
+                        students: [],
+                    });
+                    continue;
+                }
+
+                // Ambil data santri
                 const santriList = await prisma.santri.findMany({
                     where: { id: { in: anggotaIds } },
                     select: { id: true, nis: true, nama: true },
                 });
 
+                // Ambil data nilai KTI
                 const ktiList = await prisma.data_nilai_kti.findMany({
-                    where: { id_santri: { in: anggotaIds }, id_tahun_ajaran: tahunAjaran.id },
+                    where: { id_santri: { in: anggotaIds }, id_semester: semester.id },
                     select: { id: true, id_santri: true, judul: true, nilai: true },
                 });
 
+                // Buat map untuk KTI berdasarkan id_santri
                 const ktiMap = ktiList.reduce((acc, kti) => {
                     acc[kti.id_santri] = kti;
                     return acc;
                 }, {});
 
-                const simplifiedStudents = santriList.map((santri) => {
-                    const kti = ktiMap[santri.id] || {};
-                    return {
-                        id: kti.id || null,
-                        nim: santri.nis,
-                        nama: santri.nama,
-                        kelas: rombel.nama,
-                        kti_id: kti.id || null,
-                        judul: kti.judul || null,
-                        nilai: kti.nilai || null,
-                    };
-                });
+                // Ambil data tim untuk setiap KTI
+                const simplifiedStudents = await Promise.all(
+                    santriList.map(async (santri) => {
+                        const kti = ktiMap[santri.id] || {};
+                        let team = [];
 
+                        // Jika KTI memiliki judul, ambil anggota tim dengan judul yang sama
+                        if (kti.judul) {
+                            const kti_team = await prisma.data_nilai_kti.findMany({
+                                where: {
+                                    judul: kti.judul,
+                                    id_santri: { not: santri.id },
+                                    id_semester: semester.id,
+                                },
+                                select: {
+                                    id: true,
+                                    id_santri: true,
+                                    nilai: true,
+                                },
+                            });
+
+                            // Ambil nama santri dan kelas untuk anggota tim
+                            team = await Promise.all(
+                                kti_team.map(async (member) => {
+                                    const teamSantri = await prisma.santri.findUnique({
+                                        where: { id: member.id_santri },
+                                        include: {
+                                            data_rombel_anggota: {
+                                                where: { data_rombel: { id_tahun_ajaran: semester.id_tahun_ajaran } },
+                                                include: {
+                                                    data_rombel: {
+                                                        include: {
+                                                            ref_kelas: true,
+                                                        },
+                                                    },
+                                                },
+                                                take: 1,
+                                            },
+                                        },
+                                    });
+
+                                    return {
+                                        id: member.id,
+                                        santri_id: member.id_santri,
+                                        nama: teamSantri ? teamSantri.nama : null,
+                                        kelas: teamSantri?.data_rombel_anggota?.[0]?.data_rombel?.ref_kelas?.kelas || null,
+                                        nilai: member.nilai,
+                                    };
+                                })
+                            );
+                        }
+
+                        // Hitung nilai null
+                        const isNullValue = !kti.nilai;
+
+                        return {
+                            id_santri: santri.id || null,
+                            nim: santri.nis,
+                            nama: santri.nama,
+                            kelas: rombel.ref_kelas?.kelas || null,
+                            kti_id: kti.id || null,
+                            judul: kti.judul || null,
+                            nilai: kti.nilai || null,
+                            team: team.length > 0 ? team : null,
+                            has_null_value: isNullValue,
+                        };
+                    })
+                );
+
+                // Hitung jumlah nilai null
+                const studentsWithoutGrades = simplifiedStudents.filter((student) => student.has_null_value).length;
+
+                // Tambahkan data rombel ke santriData
                 santriData.push({
                     class_id: rombel.id,
-                    class: rombel.nama,
-                    students: simplifiedStudents,
+                    class: rombel.ref_kelas?.kelas || null,
+                    total_students: santriList.length,
+                    students_without_grades: studentsWithoutGrades,
+                    students: simplifiedStudents.map(({ has_null_value, ...rest }) => rest),
                 });
             }
 
@@ -75,9 +160,14 @@ export class KtiController {
                 const flatList = santriData
                     .flatMap((item) => item.students)
                     .sort((a, b) => a.nama.localeCompare(b.nama));
-                return res.status(200).json(flatList);
+                return res.status(200).json({
+                    total_students: flatList.length,
+                    total_students_without_grades: santriData.reduce((sum, rombel) => sum + rombel.students_without_grades, 0),
+                    students: flatList,
+                });
             }
         } catch (error) {
+            console.log(error);
             next(error);
         }
     };
@@ -152,12 +242,12 @@ export class KtiController {
     static batchCreateKti = async (req, res, next) => {
         try {
             // Destructure input dari req.body
-            const { id_santri, id_tahun_ajaran, id_semester, nilai, judul } = req.body;
+            const { id_santri, id_semester, nilai, judul } = req.body;
 
             // Validasi input
-            if (!id_santri || !id_tahun_ajaran || !id_semester || !nilai || !judul) {
+            if (!id_santri || !id_semester || !nilai || !judul) {
                 return res.status(400).json({
-                    message: "Missing required fields: id_santri, id_tahun_ajaran, id_semester, nilai, judul"
+                    message: "Missing required fields: id_santri, id_semester, nilai, judul"
                 });
             }
 
@@ -177,9 +267,8 @@ export class KtiController {
                     return prisma.data_nilai_kti.create({
                         data: {
                             id_santri: parseInt(id_santri), // Pastikan id_santri adalah integer
-                            id_tahun_ajaran: parseInt(id_tahun_ajaran), // Pastikan integer
                             id_semester: parseInt(id_semester), // Pastikan integer
-                            nilai: parseFloat(nilai), // Konversi nilai ke float
+                            nilai: parseInt(nilai), // Konversi nilai ke integer sesuai schema
                             judul
                         }
                     });
@@ -192,7 +281,6 @@ export class KtiController {
                 data: ktiData
             });
         } catch (error) {
-            // Tangani error dengan middleware
             next(error);
         }
     };
@@ -201,7 +289,7 @@ export class KtiController {
     static updateKti = async (req, res, next) => {
         try {
             // Ambil token dari header Authorization
-            const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
+            const { decoded, semester } = await getTokenPayload(req);
 
             // Ambil input dari req.body
             const { id_santri, nilai, judul } = req.body;
@@ -222,7 +310,6 @@ export class KtiController {
             // Siapkan data untuk update atau create
             const updateData = {};
             const createData = {
-                id_tahun_ajaran: tahunAjaran.id,
                 id_semester: semester.id
             };
             if (judul) {
@@ -230,8 +317,8 @@ export class KtiController {
                 createData.judul = judul;
             }
             if (nilai) {
-                updateData.nilai = parseFloat(nilai);
-                createData.nilai = parseFloat(nilai);
+                updateData.nilai = parseInt(nilai); // Konversi ke integer sesuai schema
+                createData.nilai = parseInt(nilai);
             }
 
             // Proses setiap santri secara berurutan
@@ -242,7 +329,6 @@ export class KtiController {
                 const existingKti = await prisma.data_nilai_kti.findFirst({
                     where: {
                         id_santri: parseInt(santriId),
-                        id_tahun_ajaran: tahunAjaran.id,
                         id_semester: semester.id
                     }
                 });
@@ -268,7 +354,10 @@ export class KtiController {
             }
 
             // Kirim respons sukses
-            res.status(200).json(updatedData);
+            res.status(200).json({
+                message: "Data KTI Berhasil diperbarui",
+                data: updatedData
+            });
         } catch (error) {
             console.error("Error processing KTI:", error);
             next(error);

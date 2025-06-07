@@ -6,6 +6,7 @@ import {authenticate, checkPermission} from '../middleware/auth.middleware.js';
 router.get('/active', authenticate, SemesterController.getActiveSemester);
 router.get('/sync', authenticate, SemesterController.migrateSemester);
 router.put('/active/:id', authenticate, SemesterController.setActiveSemester);
+router.get('/year-options', authenticate, SemesterController.getTahunAjaranOptions);
 
 router.post('/', authenticate, checkPermission("SEMESTER-CREATE"), SemesterController.createSemester);
 router.get('/', authenticate, checkPermission("SEMESTER-VIEW"), SemesterController.getAllSemesters);

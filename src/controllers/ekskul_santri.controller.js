@@ -2,18 +2,16 @@ import { prisma } from "../prisma.js";
 import {JWTService} from "../services/jwt.service.js";
 import {getTokenPayload} from "../helpers.js";
 
+/*
+Master Kategori Ekskul:
+1. Akademik
+2. Non Akademik
+ */
+
 export class EkskulSantriController {
     static createEkskulSantri = async (req, res) => {
         try {
-            const { id_santri, id_mapel, tgl_masuk, tgl_keluar } = req.body;
-
-            // Validasi input
-            if (!id_santri || !id_mapel) {
-                return res.status(400).json({
-                    status: 'error',
-                    message: 'id_santri dan id_mapel wajib diisi',
-                });
-            }
+            const { id_santri, id_mapel, tgl_masuk, tgl_keluar, id_kepesertaan, keterangan } = req.body;
 
             // Buat data ekskul santri baru
             const newEkskulSantri = await prisma.data_eskul.create({
@@ -22,11 +20,16 @@ export class EkskulSantriController {
                     id_mapel: parseInt(id_mapel),
                     tgl_masuk: tgl_masuk ? new Date(tgl_masuk) : null,
                     tgl_keluar: tgl_keluar ? new Date(tgl_keluar) : null,
+                    id_kepesertaan: parseInt(id_kepesertaan),
+                    keterangan: keterangan || null,
                 },
             });
 
             // Respon sukses
-            return res.status(201).json(newEkskulSantri);
+            return res.status(201).json({
+                message: 'Berhasil membuat ekskul santri',
+                data: newEkskulSantri,
+            });
         } catch (error) {
             console.error('Error creating ekskul santri:', error);
             return res.status(500).json({
@@ -38,9 +41,10 @@ export class EkskulSantriController {
 
     static getAllEkskulSantri = async (req, res, next) => {
         try {
-            const { groupbyclass, class: className, kategori } = req.query;
+            const { groupbyclass, class: className, cat } = req.query;
             const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
 
+            // Build where clause for rombel query
             const whereClause = { id_tahun_ajaran: tahunAjaran.id };
             if (className) {
                 const ref_kelas = await prisma.ref_kelas.findFirst({
@@ -49,7 +53,7 @@ export class EkskulSantriController {
                 if (!ref_kelas) {
                     return res.status(404).json({ message: "Kelas tidak ditemukan" });
                 }
-                whereClause["id_kelas"] = ref_kelas.id;
+                whereClause.id_kelas = ref_kelas.id;
             }
 
             // Fetch rombel data with members
@@ -61,22 +65,26 @@ export class EkskulSantriController {
                             id_santri: true,
                         },
                     },
+                    ref_kelas:true
                 },
+                orderBy: [
+                    { ref_kelas: { id_tingkat: 'asc' } },
+                    { ref_kelas: { urutan: 'asc' } }
+                ],
             });
 
-            // Ambil ID kategori ekskul
+            if (!rombels.length) {
+                return res.status(200).json([]);
+            }
+
+            // Fetch extracurricular categories
             const ekskulCategories = await prisma.ref_master_kategori.findMany({
-                where: {
-                    tipe: "ekskul",
-                },
-                select: {
-                    id: true,
-                },
+                where: { tipe: "ekskul" },
+                select: { id: true },
             });
 
             const ekskul_master_ids = ekskulCategories.map((category) => category.id);
 
-            // Jika tidak ada kategori ekskul, kembalikan array kosong
             if (ekskul_master_ids.length === 0) {
                 return res.status(200).json([]);
             }
@@ -86,73 +94,67 @@ export class EkskulSantriController {
             for (const rombel of rombels) {
                 const anggotaIds = rombel.data_rombel_anggota.map((anggota) => anggota.id_santri);
 
-                // Fetch santri data for members
-                const santriList = await prisma.santri.findMany({
-                    where: { id: { in: anggotaIds } },
-                    select: { id: true, nis: true, nama: true },
-                });
+                // Initialize student list and ekskul map
+                let santriList = [];
+                let santriMap = {};
+                let ekskulMap = {};
 
-                // Create a map of santri ID to santri data
-                const santriMap = santriList.reduce((acc, santri) => {
-                    acc[santri.id] = santri;
-                    return acc;
-                }, {});
-
-                // Fetch extracurricular data for students in this rombel
-                const ekskulList = await prisma.data_eskul.findMany({
-                    where: {
-                        id_santri: { in: anggotaIds },
-                    },
-                });
-
-                // Fetch mapel data for all id_mapel in ekskulList with kategori filter
-                const mapelIds = [...new Set(ekskulList.map((ekskul) => ekskul.id_mapel))];
-                let mapelWhereClause = {
-                    id: { in: mapelIds },
-                    id_master_kategori_ref_mapel: { in: ekskul_master_ids },
-                };
-
-                // Tambahkan filter kategori jika disediakan
-                if (kategori) {
-                    if (isNaN(parseInt(kategori))) {
-                        return res.status(400).json({ message: "Kategori harus berupa angka" });
-                    }
-                    mapelWhereClause = {
-                        ...mapelWhereClause,
-                        id_master_kategori_ref_mapel: parseInt(kategori),
-                    };
-                }
-
-                const mapelList = await prisma.ref_mapel.findMany({
-                    where: mapelWhereClause,
-                    select: {
-                        id: true,
-                        nama: true,
-                    },
-                });
-
-                // Create a map of mapel ID to name
-                const mapelMap = mapelList.reduce((acc, mapel) => {
-                    acc[mapel.id] = mapel.nama;
-                    return acc;
-                }, {});
-
-                // Group extracurriculars by student
-                const ekskulMap = ekskulList.reduce((acc, ekskul) => {
-                    if (!acc[ekskul.id_santri]) {
-                        acc[ekskul.id_santri] = [];
-                    }
-                    const ekskulName = mapelMap[ekskul.id_mapel] || "Unknown";
-                    acc[ekskul.id_santri].push({
-                        id: ekskul.id,
-                        nama: ekskulName,
+                if (anggotaIds.length > 0) {
+                    // Fetch santri data for members
+                    santriList = await prisma.santri.findMany({
+                        where: { id: { in: anggotaIds } },
+                        select: { id: true, nis: true, nama: true },
                     });
-                    return acc;
-                }, {});
+
+                    // Create a map of santri ID to santri data
+                    santriMap = santriList.reduce((acc, santri) => {
+                        acc[santri.id] = santri;
+                        return acc;
+                    }, {});
+
+                    // Build where clause for ekskul query
+                    const ekskulWhereClause = {
+                        id_santri: { in: anggotaIds },
+                    };
+
+                    if (cat) {
+                        if (isNaN(parseInt(cat))) {
+                            return res.status(400).json({ message: "Kategori harus berupa angka" });
+                        }
+                        ekskulWhereClause.ref_mapel = {
+                            id_master_kategori_ref_mapel: parseInt(cat),
+                        };
+                    }
+
+                    // Fetch extracurricular data
+                    const ekskulList = await prisma.data_eskul.findMany({
+                        where: ekskulWhereClause,
+                        include: {
+                            ref_mapel: {
+                                select: {
+                                    id: true,
+                                    nama: true,
+                                },
+                            },
+                        },
+                    });
+
+                    // Create a map of santri ID to their extracurriculars
+                    ekskulMap = ekskulList.reduce((acc, ekskul) => {
+                        if (!acc[ekskul.id_santri]) {
+                            acc[ekskul.id_santri] = [];
+                        }
+                        acc[ekskul.id_santri].push({
+                            id: ekskul.ref_mapel.id,
+                            nama: ekskul.ref_mapel.nama,
+                        });
+                        return acc;
+                    }, {});
+                }
 
                 // Create student list with extracurricular data
                 const simplifiedStudents = rombel.data_rombel_anggota
-                    .filter((anggota) => santriMap[anggota.id_santri]) // Ensure santri exists
+                    .filter((anggota) => santriMap[anggota.id_santri])
                     .map((anggota) => ({
                         id: santriMap[anggota.id_santri].id,
                         nis: santriMap[anggota.id_santri].nis,
@@ -161,9 +163,10 @@ export class EkskulSantriController {
                         ekskul: ekskulMap[anggota.id_santri] || [],
                     }));
 
+                // Add rombel to santriData, even if it has no students
                 santriData.push({
                     class_id: rombel.id,
-                    class: rombel.nama,
+                    class: rombel.ref_kelas.kelas,
                     students: simplifiedStudents,
                 });
             }
@@ -182,10 +185,33 @@ export class EkskulSantriController {
                 return res.status(200).json(flatList);
             }
         } catch (error) {
-            console.error(error);
+            console.error("Error in getAllEkskulSantri:", error);
             next(error);
         }
     };
+
+    static getJabatan = async (req, res, next) => {
+        try {
+            const jabatanList = await prisma.ref_master_kategori.findMany({
+                where: {
+                    tipe: "kepesertaan_ekskul",
+                },
+                select: {
+                    id: true,
+                    nama: true,
+                },
+            });
+
+            if (!jabatanList || jabatanList.length === 0) {
+                return res.status(404).json({ message: "Jabatan tidak ditemukan" });
+            }
+
+            return res.status(200).json(jabatanList);
+        } catch (error) {
+            console.error("Error fetching jabatan:", error);
+            next(error);
+        }
+    }
 
     static getEkskulSantriById = async (req, res, next) => {
         try {
@@ -212,9 +238,8 @@ export class EkskulSantriController {
                 },
                 include: {
                     data_rombel: {
-                        select: {
-                            id: true,
-                            nama: true
+                        include: {
+                            ref_kelas: true
                         }
                     }
                 }
@@ -234,18 +259,24 @@ export class EkskulSantriController {
             const ekskulList = await prisma.data_eskul.findMany({
                 where: {
                     id_santri: parseInt(id),
-                    tgl_masuk: { lte: new Date() },
-                    OR: [
-                        { tgl_keluar: null },
-                        { tgl_keluar: { gte: new Date() } }
-                    ]
+                },
+                include: {
+                    ref_mapel: {
+                        include: {
+                            ref_master_kategori_ref_mapel: true
+                        }
+                    },
+                    ref_master_kategori: true
+                }
+            });
+
+            const master_kateogori_eksul = await prisma.ref_master_kategori.findMany({
+                where: {
+                    tipe: "ekskul",
                 },
                 select: {
                     id: true,
-                    id_mapel: true,
-                    tgl_masuk: true,
-                    tgl_keluar: true
-                }
+                },
             });
 
             // Get extracurricular names
@@ -253,7 +284,9 @@ export class EkskulSantriController {
             const mapelList = await prisma.ref_mapel.findMany({
                 where: {
                     id: { in: mapelIds },
-                    tipe: "extracurricular"
+                    id_master_kategori_ref_mapel: {
+                        in: master_kateogori_eksul.map(cat => cat.id)
+                    }
                 },
                 select: {
                     id: true,
@@ -267,12 +300,19 @@ export class EkskulSantriController {
                 return acc;
             }, {});
 
+            console.log(ekskulList);
+
             // Format extracurricular data
             const ekskulData = ekskulList.map(ekskul => ({
-                id: ekskul.id,
+                id_ekskul: ekskul.id_mapel,
+                id_ekskul_santri: ekskul.id,
                 nama: mapelMap[ekskul.id_mapel] || "Unknown",
                 tgl_masuk: ekskul.tgl_masuk,
-                tgl_keluar: ekskul.tgl_keluar
+                tgl_keluar: ekskul.tgl_keluar,
+                tipe: ekskul.ref_mapel.ref_master_kategori_ref_mapel.nama,
+                id_kepesertaan: ekskul.id_kepesertaan,
+                jabatan: ekskul.ref_master_kategori ? ekskul.ref_master_kategori.nama : null,
+                keterangan: ekskul.keterangan || null
             }));
 
             // Return the formatted response
@@ -280,7 +320,7 @@ export class EkskulSantriController {
                 id: santri.id,
                 nis: santri.nis,
                 nama: santri.nama,
-                kelas: rombelAnggota.data_rombel.nama,
+                kelas: rombelAnggota.data_rombel.ref_kelas.kelas,
                 ekskul: ekskulData
             });
 
@@ -290,62 +330,42 @@ export class EkskulSantriController {
         }
     };
 
-    static updateEkskulSantri = async (req, res) => {
+    static updateEkskulSantri = async (req, res, next) => {
         try {
-            const { id } = req.params;
-            const { kode, nama, kkm_1, kkm_2, kkm_3, keterangan, id_kurikulum } = req.body;
+            const { id_ekskul_santri } = req.params;
+            const data = req.body;
 
-            // Cek apakah mapel ada
-            const mapel = await prisma.ref_mapel.findUnique({
-                where: { id: parseInt(id) }
-            });
-            if (!mapel) {
-                return res.status(404).json({ message: "Mapel tidak ditemukan" });
-            }
+            console.log(data);
 
-            // Cek duplikasi kode
-            if (kode && kode !== mapel.kode) {
-                const existingKode = await prisma.ref_mapel.findFirst({
-                    where: {
-                        kode,
-                        id: { not: parseInt(id) }
-                    }
-                });
-                if (existingKode) {
-                    return res.status(400).json({ message: "Kode mapel sudah digunakan" });
-                }
-            }
-
-            // Cek duplikasi nama pada kurikulum yang sama
-            if (nama && id_kurikulum && (nama !== mapel.nama || parseInt(id_kurikulum) !== mapel.id_kurikulum)) {
-                const existingNama = await prisma.ref_mapel.findFirst({
-                    where: {
-                        nama,
-                        id_kurikulum: parseInt(id_kurikulum),
-                        id: { not: parseInt(id) }
-                    }
-                });
-                if (existingNama) {
-                    return res.status(400).json({ message: "Nama mapel sudah ada untuk kurikulum ini" });
-                }
-            }
-
-            const updatedMapel = await prisma.ref_mapel.update({
-                where: { id: parseInt(id) },
-                data: {
-                    kode: kode || mapel.kode,
-                    nama: nama || mapel.nama,
-                    kkm_1: kkm_1 !== undefined ? parseInt(kkm_1) : mapel.kkm_1,
-                    kkm_2: kkm_2 !== undefined ? parseInt(kkm_2) : mapel.kkm_2,
-                    kkm_3: kkm_3 !== undefined ? parseInt(kkm_3) : mapel.kkm_3,
-                    keterangan: keterangan !== undefined ? keterangan : mapel.keterangan,
-                    id_kurikulum: id_kurikulum ? parseInt(id_kurikulum) : mapel.id_kurikulum
-                }
+            // Cek apakah record ekskul santri ada
+            const existingEkskul = await prisma.data_eskul.findUnique({
+                where: { id: parseInt(id_ekskul_santri) },
             });
 
-            res.status(200).json(updatedMapel);
+            if (!existingEkskul) {
+                return res.status(404).json({
+                    status: 'error',
+                    message: 'Data ekskul santri tidak ditemukan',
+                });
+            }
+
+            // Update data ekskul santri
+            const updatedEkskulSantri = await prisma.data_eskul.update({
+                where: { id: parseInt(id_ekskul_santri) },
+                data: data,
+            });
+
+            // Respon sukses
+            return res.status(200).json({
+                message: 'Berhasil memperbarui ekskul santri',
+                data: updatedEkskulSantri,
+            });
         } catch (error) {
-            next(error);
+            console.error('Error updating ekskul santri:', error);
+            return res.status(500).json({
+                status: 'error',
+                message: 'Terjadi kesalahan pada server',
+            });
         }
     };
 

@@ -1,233 +1,133 @@
 import { prisma } from '../prisma.js';
 
 export class KompetensiController {
-  static createKompetensi = async (req, res, next) => {
+  static async createMapelKI(req, res, next) {
     try {
-      const { kode_kompetensi, id_kurikulum, id_mapel, fase, tingkat, konten } = req.body;
-      const { created_by } = req.user;
+      const { id_mapel, deskripsi, kode_ki, kelompok, id_tingkat } = req.body;
 
-      // Validate required fields
-      if (!kode_kompetensi || !id_kurikulum || !id_mapel) {
-        return res.status(400).json({
-          success: false,
-          message: 'Kode kompetensi, kurikulum, and mapel are required'
-        });
-      }
-
-      // Check if curriculum exists
-      const kurikulum = await prisma.ref_kurikulum.findUnique({
-        where: { id: parseInt(id_kurikulum) }
-      });
-
-      if (!kurikulum) {
-        return res.status(404).json({
-          success: false,
-          message: 'Curriculum not found'
-        });
-      }
-
-      // Check if mapel exists
-      const mapel = await prisma.ref_mapel.findFirst({
-        where: {
-          id: parseInt(id_mapel),
-          id_kurikulum: parseInt(id_kurikulum)
-        }
-      });
-
-      if (!mapel) {
-        return res.status(404).json({
-          success: false,
-          message: 'Subject not found in the specified curriculum'
-        });
-      }
-
-      // Check if kompetensi code already exists
-      const existingKompetensi = await prisma.data_kompetensi.findFirst({
-        where: { kode_kompetensi }
-      });
-
-      if (existingKompetensi) {
-        return res.status(400).json({
-          success: false,
-          message: 'Competency code already exists'
-        });
-      }
-
-      const kompetensi = await prisma.data_kompetensi.create({
+      const data = await prisma.data_kompetensi_inti.create({
         data: {
-          kode_kompetensi,
-          id_kurikulum: parseInt(id_kurikulum),
           id_mapel,
-          fase,
-          tingkat,
-          konten,
-          created_by
-        }
+          deskripsi,
+          kode_ki,
+          kelompok,
+          id_tingkat,
+        },
       });
 
       res.status(201).json({
-        success: true,
-        data: kompetensi
+        message: 'Kompetensi Inti berhasil dibuat',
+        data,
       });
-    } catch (error) {
-      next(error);
+    } catch (e) {
+      next(e);
     }
   }
 
-  static getAllKompetensiByKurikulum = async (req, res, next) => {
+  static async createMapelKD(req, res, next) {
     try {
-      const { id_kurikulum } = req.params;
+      const { id_mapel, id_ki, kode_kd, deskripsi } = req.body;
 
-      const kompetensi = await prisma.data_kompetensi.findMany({
-        where: { id_kurikulum: parseInt(id_kurikulum) },
-        include: {
-          ref_kurikulum: true,
-          ref_mapel: true
-        }
-      });
-
-      res.json({
-        success: true,
-        data: kompetensi
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  static getAllKompetensiByMapel = async (req, res, next) => {
-    try {
-      const { id_kurikulum, id_mapel } = req.params;
-
-      const kompetensi = await prisma.data_kompetensi.findMany({
-        where: {
-          id_kurikulum: parseInt(id_kurikulum),
-          id_mapel
+      const data = await prisma.data_kompetensi_dasar.create({
+        data: {
+          id_mapel,
+          id_ki,
+          kode_kd,
+          deskripsi,
         },
-        include: {
-          ref_kurikulum: true,
-          ref_mapel: true
-        }
       });
 
-      res.json({
-        success: true,
-        data: kompetensi
+      res.status(201).json({
+        message: 'Kompetensi Dasar berhasil dibuat',
+        data,
       });
-    } catch (error) {
-      next(error);
+    } catch (e) {
+      next(e);
     }
   }
 
-  static getKompetensiById = async (req, res, next) => {
+  static async updateMapelKI(req, res, next) {
     try {
       const { id } = req.params;
+      const { deskripsi, kode_ki, kelompok, id_tingkat } = req.body;
 
-      const kompetensi = await prisma.data_kompetensi.findUnique({
-        where: { id: parseInt(id) },
-        include: {
-          ref_kurikulum: true,
-          ref_mapel: true
-        }
-      });
-
-      if (!kompetensi) {
-        return res.status(404).json({
-          success: false,
-          message: 'Competency not found'
-        });
-      }
-
-      res.json({
-        success: true,
-        data: kompetensi
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  static updateKompetensi = async (req, res, next) => {
-    try {
-      const { id } = req.params;
-      const { kode_kompetensi, fase, tingkat, konten } = req.body;
-
-      // Check if kompetensi exists
-      const existingKompetensi = await prisma.data_kompetensi.findUnique({
-        where: { id: parseInt(id) }
-      });
-
-      if (!existingKompetensi) {
-        return res.status(404).json({
-          success: false,
-          message: 'Competency not found'
-        });
-      }
-
-      // If code is being updated, check if it already exists
-      if (kode_kompetensi && kode_kompetensi !== existingKompetensi.kode_kompetensi) {
-        const kodeExists = await prisma.data_kompetensi.findFirst({
-          where: {
-            kode_kompetensi,
-            NOT: {
-              id: parseInt(id)
-            }
-          }
-        });
-
-        if (kodeExists) {
-          return res.status(400).json({
-            success: false,
-            message: 'Competency code already exists'
-          });
-        }
-      }
-
-      const updatedKompetensi = await prisma.data_kompetensi.update({
+      const data = await prisma.data_kompetensi_inti.update({
         where: { id: parseInt(id) },
         data: {
-          kode_kompetensi,
-          fase,
-          tingkat,
-          konten
-        }
+          deskripsi,
+          kode_ki,
+          kelompok,
+          id_tingkat,
+        },
       });
 
       res.json({
-        success: true,
-        data: updatedKompetensi
+        status: true,
+        message: 'Kompetensi Inti berhasil diperbarui',
+        data,
       });
-    } catch (error) {
-      next(error);
+    } catch (e) {
+      next(e);
     }
   }
 
-  static deleteKompetensi = async (req, res, next) => {
+  static async updateMapelKD(req, res, next) {
     try {
       const { id } = req.params;
+      const { id_ki, kode_kd, deskripsi } = req.body;
 
-      // Check if kompetensi exists
-      const existingKompetensi = await prisma.data_kompetensi.findUnique({
-        where: { id: parseInt(id) }
-      });
-
-      if (!existingKompetensi) {
-        return res.status(404).json({
-          success: false,
-          message: 'Competency not found'
-        });
-      }
-
-      await prisma.data_kompetensi.delete({
-        where: { id: parseInt(id) }
+      const data = await prisma.data_kompetensi_dasar.update({
+        where: { id: parseInt(id) },
+        data: {
+          id_ki,
+          kode_kd,
+          deskripsi,
+        },
       });
 
       res.json({
-        success: true,
-        message: 'Competency deleted successfully'
+        status: true,
+        message: 'Kompetensi Dasar berhasil diperbarui',
+        data,
       });
-    } catch (error) {
-      next(error);
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  // Menghapus Kompetensi Inti (KI)
+  static async deleteMapelKI(req, res, next) {
+    try {
+      const { id } = req.params;
+
+      await prisma.data_kompetensi_inti.delete({
+        where: { id: parseInt(id) },
+      });
+
+      res.json({
+        status: true,
+        message: 'Kompetensi Inti berhasil dihapus',
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  // Menghapus Kompetensi Dasar (KD)
+  static async deleteMapelKD(req, res, next) {
+    try {
+      const { id } = req.params;
+
+      await prisma.data_kompetensi_dasar.delete({
+        where: { id: parseInt(id) },
+      });
+
+      res.json({
+        status: true,
+        message: 'Kompetensi Dasar berhasil dihapus',
+      });
+    } catch (e) {
+      next(e);
     }
   }
 }

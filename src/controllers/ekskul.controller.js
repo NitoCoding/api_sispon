@@ -9,46 +9,35 @@ Master Kategori Ref Ekskul:
 export class EkskulController {
     static createEkskul = async (req, res, next) => {
         try {
-            const { kode, nama, kkm_1, kkm_2, kkm_3, keterangan, id_kurikulum, id_master_kategori } = req.body;
+            const data = req.body;
 
             // Validasi input
-            if (!kode || !nama || !id_master_kategori) {
+            if (!data.kode || !data.nama || !data.id_master_kategori_ref_mapel) {
                 return res.status(400).json({ message: "Kode, nama, dan kategori wajib diisi" });
             }
 
             // Cek duplikasi kode
             const existingKode = await prisma.ref_mapel.findFirst({
-                where: { kode }
+                where: { kode: data.kode }
             });
             if (existingKode) {
                 return res.status(400).json({ message: "Kode mapel sudah digunakan" });
             }
 
-            // Cek duplikasi nama pada kurikulum yang sama
-            const existingNama = await prisma.ref_mapel.findFirst({
-                where: {
-                    nama,
-                    id_kurikulum
-                }
-            });
-            if (existingNama) {
-                return res.status(400).json({ message: "Nama mapel sudah ada untuk kurikulum ini" });
-            }
+            // Tambahkan jenis_nilai dengan value "Huruf"
+            const mapelData = {
+                ...data,
+                jenis_nilai: "Huruf"
+            };
 
             const mapel = await prisma.ref_mapel.create({
-                data: {
-                    kode,
-                    nama,
-                    kkm_1: kkm_1 ? parseInt(kkm_1) : null,
-                    kkm_2: kkm_2 ? parseInt(kkm_2) : null,
-                    kkm_3: kkm_3 ? parseInt(kkm_3) : null,
-                    keterangan,
-                    id_kurikulum: parseInt(id_kurikulum),
-                    id_master_kategori: parseInt(id_master_kategori)
-                }
+                data: mapelData
             });
 
-            res.status(201).json(mapel);
+            res.status(201).json({
+                message: "Ekskul berhasil dibuat",
+                data: mapel
+            });
         } catch (error) {
             next(error);
         }
@@ -56,7 +45,7 @@ export class EkskulController {
 
     static getAllEkskul = async (req, res, next) => {
         try {
-            const { kategori } = req.query;
+            const { cat } = req.query;
 
             const ekskulCategories = await prisma.ref_master_kategori.findMany({
                 where: {
@@ -75,22 +64,33 @@ export class EkskulController {
                 },
             };
 
-            if (kategori) {
-                if (isNaN(parseInt(kategori))) {
+            if (cat) {
+                if (isNaN(parseInt(cat))) {
                     return res.status(400).json({ message: "Kategori harus berupa angka" });
                 }
                 whereClause = {
                     ...whereClause,
-                    id_master_kategori_ref_mapel: parseInt(kategori),
+                    id_master_kategori_ref_mapel: parseInt(cat),
                 };
             }
 
             const mapels = await prisma.ref_mapel.findMany({
                 where: whereClause,
                 orderBy: { id: "asc" },
+                include: {
+                    ref_master_kategori_ref_mapel: true
+                }
             });
 
-            res.status(200).json(mapels);
+            const flattenedMapels = mapels.map((mapel) => {
+                const { ref_master_kategori_ref_mapel, ...rest } = mapel;
+                return {
+                    ...rest,
+                    tipe: ref_master_kategori_ref_mapel.nama,
+                };
+            });
+
+            res.status(200).json(flattenedMapels);
         } catch (error) {
             console.error(error); // Log error untuk debugging
             next(error);
@@ -114,62 +114,82 @@ export class EkskulController {
         }
     };
 
+    static getEkskulTipe = async (req, res, next) => {
+        try {
+            const kategori = await prisma.ref_master_kategori.findMany({
+                where: {
+                    tipe: "ekskul"
+                },
+                orderBy: {
+                    nama: "asc"
+                }
+            });
+            res.status(200).json(kategori);
+        } catch (error) {
+            next(error);
+        }
+    }
+
     static updateEkskul = async (req, res, next) => {
         try {
-            const { id } = req.params;
-            const { kode, nama, kkm_1, kkm_2, kkm_3, keterangan, id_kurikulum, id_master_kategori } = req.body;
+            const { id_mapel } = req.params;
+            const { kode, nama, keterangan, id_kurikulum, id_master_kategori_ref_mapel, nama_arab, sifat, id_pengajar } = req.body;
+
+            // Validasi id_mapel
+            if (!id_mapel || isNaN(parseInt(id_mapel))) {
+                return res.status(400).json({ message: 'ID mapel tidak valid' });
+            }
 
             // Cek apakah mapel ada
-            const mapel = await prisma.ref_mapel.findUnique({
-                where: { id: parseInt(id) }
+            const existingMapel = await prisma.ref_mapel.findUnique({
+                where: { id: parseInt(id_mapel) },
             });
-            if (!mapel) {
-                return res.status(404).json({ message: "Mapel tidak ditemukan" });
+
+            if (!existingMapel) {
+                return res.status(404).json({ message: 'Mapel tidak ditemukan' });
             }
 
-            // Cek duplikasi kode
-            if (kode && kode !== mapel.kode) {
-                const existingKode = await prisma.ref_mapel.findFirst({
+            // Cek apakah kode sudah digunakan (kecuali untuk mapel yang sama)
+            if (kode) {
+                const duplicateKode = await prisma.ref_mapel.findFirst({
                     where: {
                         kode,
-                        id: { not: parseInt(id) }
-                    }
+                        keterangan: keterangan || existingMapel.keterangan,
+                        id: { not: parseInt(id_mapel) }, // Kecualikan mapel yang sedang diupdate
+                    },
                 });
-                if (existingKode) {
-                    return res.status(400).json({ message: "Kode mapel sudah digunakan" });
+
+                if (duplicateKode) {
+                    return res.status(400).json({ message: 'Kode dan keterangan sudah digunakan oleh mapel lain' });
                 }
             }
 
-            // Cek duplikasi nama pada kurikulum yang sama
-            if (nama && id_kurikulum && (nama !== mapel.nama || parseInt(id_kurikulum) !== mapel.id_kurikulum)) {
-                const existingNama = await prisma.ref_mapel.findFirst({
-                    where: {
-                        nama,
-                        id_kurikulum: parseInt(id_kurikulum),
-                        id: { not: parseInt(id) }
-                    }
-                });
-                if (existingNama) {
-                    return res.status(400).json({ message: "Nama mapel sudah ada untuk kurikulum ini" });
-                }
-            }
+            // Siapkan data untuk update
+            const updateData = {
+                kode,
+                nama: nama || undefined,
+                keterangan: keterangan || undefined,
+                id_kurikulum: id_kurikulum ? parseInt(id_kurikulum) : undefined,
+                id_master_kategori_ref_mapel: id_master_kategori_ref_mapel ? parseInt(id_master_kategori_ref_mapel) : undefined,
+                nama_arab: nama_arab || undefined,
+                sifat: sifat || undefined,
+                id_pengajar: id_pengajar ? parseInt(id_pengajar) : undefined,
+            };
 
+            // Update mapel
             const updatedMapel = await prisma.ref_mapel.update({
-                where: { id: parseInt(id) },
-                data: {
-                    kode: kode || mapel.kode,
-                    nama: nama || mapel.nama,
-                    kkm_1: kkm_1 !== undefined ? parseInt(kkm_1) : mapel.kkm_1,
-                    kkm_2: kkm_2 !== undefined ? parseInt(kkm_2) : mapel.kkm_2,
-                    kkm_3: kkm_3 !== undefined ? parseInt(kkm_3) : mapel.kkm_3,
-                    keterangan: keterangan !== undefined ? keterangan : mapel.keterangan,
-                    id_kurikulum: id_kurikulum ? parseInt(id_kurikulum) : mapel.id_kurikulum,
-                    id_master_kategori: id_master_kategori ? parseInt(id_master_kategori) : mapel.id_master_kategori
-                }
+                where: { id: parseInt(id_mapel) },
+                data: updateData,
             });
 
-            res.status(200).json(updatedMapel);
+            res.json({
+                message: 'Ekskul berhasil diperbarui',
+                data: updatedMapel,
+            });
         } catch (error) {
+            if (error.name === 'PrismaClientValidationError') {
+                return res.status(400).json({ message: 'Data input tidak valid', error: error.message });
+            }
             next(error);
         }
     };

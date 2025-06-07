@@ -45,6 +45,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 app.use('/images', express.static(path.join(__dirname, '../public/pdf_template/images')));
+app.use('/pdf_template', express.static(path.join(__dirname, '../public/pdf_template')));
 
 // API Routes
 import userRoutes from './routes/user.route.js';
@@ -64,6 +65,15 @@ import prestasiPelanggaranRoute from "./routes/prestasi_pelanggaran.route.js";
 import rolesRoutes from "./routes/role.route.js";
 import dataKelasRoutes from "./routes/data_kelas.route.js";
 import rombelKelasRoutes from "./routes/rombel_kelas.route.js";
+import mapelRoute from "./routes/mapel.route.js";
+import komponenRoutes from "./routes/komponen.route.js";
+import rencanaPenilaianRoutes from "./routes/rencana_penilaian.route.js";
+import kurikulumRoutes from "./routes/kurikulum.route.js";
+import jamPelajaranRoutes from "./routes/jam_pelajaran.route.js";
+import raporRoutes from "./routes/rapor.route.js";
+import kkmRoutes from "./routes/kkm.route.js";
+import rosterRoutes from "./routes/roster.route.js";
+import kompetensiRoutes from "./routes/kompetensi.route.js";
 
 app.use('/auth', authRoutes);
 app.use('/tahun-ajarans', tahunAjaranRoutes)
@@ -81,6 +91,15 @@ app.use('/prestasi-pelanggarans', prestasiPelanggaranRoute);
 app.use('/roles', rolesRoutes);
 app.use('/data-kelas', dataKelasRoutes);
 app.use('/rombel-kelas', rombelKelasRoutes);
+app.use('/mapels', mapelRoute);
+app.use('/komponens', komponenRoutes);
+app.use('/rencana-penilaians', rencanaPenilaianRoutes);
+app.use('/kurikulums', kurikulumRoutes);
+app.use('/jam-pelajarans', jamPelajaranRoutes);
+app.use('/rapors', raporRoutes);
+app.use('/kkms', kkmRoutes);
+app.use('/rosters', rosterRoutes);
+app.use('/kompetensis', kompetensiRoutes);
 
 // Error handling
 app.use(errorHandler);

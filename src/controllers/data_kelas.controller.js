@@ -1,4 +1,5 @@
 import { prisma } from "../prisma.js"
+import {getTokenPayload} from "../helpers.js";
 
 export class DataKelasController {
   // Data Kelas Operations
@@ -26,27 +27,23 @@ export class DataKelasController {
 
   static getAllDataKelas = async (req, res, next) => {
     try {
-      const {tahun_ajaran, semester} = req.query;
+      const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
 
-      if(!tahun_ajaran || !semester) return res.status(400).json({
-        success: false,
-        message: 'Tahun ajaran and semester is required' 
-      })
       const kelas = await prisma.data_kelas.findMany({
         where: {
-          id_semester: parseInt(semester),
-          id_semester: parseInt(semester),
+          id_semester: parseInt(semester.id),
         },
         include: {
           data_absensi: true,
-          data_rencana_penilaian: true
+          data_rencana_penilaian: {
+            include: {
+              ref_komponen_nilai: true
+            }
+          }
         }
       });
 
-      res.json({
-        success: true,
-        data: kelas
-      });
+      res.json(kelas);
     } catch (error) {
       next(error)
     }
@@ -97,6 +94,46 @@ export class DataKelasController {
 
       res.json({
         success: true,
+        data: kelas
+      });
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  static lockDataKelas = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+
+      const kelas = await prisma.data_kelas.update({
+        where: { id: parseInt(id) },
+        data: {
+          is_locked: true
+        }
+      });
+
+      res.json({
+        message: "Data kelas berhasil dikunci",
+        data: kelas
+      });
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  static unlockDataKelas = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+
+      const kelas = await prisma.data_kelas.update({
+        where: { id: parseInt(id) },
+        data: {
+          is_locked: false
+        }
+      });
+
+      res.json({
+        message: "Data kelas berhasil dibuka kuncinya",
         data: kelas
       });
     } catch (error) {

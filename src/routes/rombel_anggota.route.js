@@ -7,7 +7,7 @@ import { authenticate } from '../middleware/auth.middleware.js';
 router.use(authenticate);
 
 router.get('/sync', RombelAnggotaController.syncRombel);
-router.get('/move', RombelAnggotaController.moveAnggota);
+router.put('/move', RombelAnggotaController.moveAnggota);
 
 router.get('/history/:id_santri', RombelAnggotaController.getRiwayatSantri);
 router.post('/', RombelAnggotaController.createRombelAnggota);

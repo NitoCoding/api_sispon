@@ -29,6 +29,7 @@ export class PrestasiPelanggaranController {
                 id_basis_lokasi
             } = JSON.parse(req.body.data);
 
+
             const file_bukti = req.files;
 
             let file_bukti_list = [];
@@ -77,7 +78,10 @@ export class PrestasiPelanggaranController {
                 }
             });
 
-            return res.status(201).json(newData);
+            return res.status(201).json({
+                message: 'Prestasi/Pelanggaran berhasil dibuat',
+                data: newData
+            });
         } catch (error) {
             next(error);
         }
@@ -294,101 +298,187 @@ export class PrestasiPelanggaranController {
         }
     };
 
-    static getPrestasiPelanggaranById = async (req, res) => {
+    static getPrestasiPelanggaranById = async (req, res, next) => {
         try {
-            const { id, idkur } = req.params;
+            const { id } = req.params;
 
-            const mapel = await prisma.ref_mapel.findFirst({
-                where: {
-                    id: parseInt(id),
-                    id_kurikulum: parseInt(idkur)
-                }
-            });
-
-            if (!mapel) {
-                return res.status(404).json({
-                    success: false,
-                    message: "Subject not found"
+            // Validasi ID
+            if (!id || isNaN(parseInt(id))) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'ID prestasi/pelanggaran tidak valid',
                 });
             }
 
-            res.json({
-                success: true,
-                data: mapel
+            // Ambil data prestasi/pelanggaran berdasarkan ID
+            const prestasiPelanggaran = await prisma.data_prestasi_pelanggaran.findUnique({
+                where: { id: parseInt(id) },
+                include: {
+                    ref_master_kategori: true,
+                    santri: {
+                        select: { id: true, nis: true, nama: true },
+                    },
+                },
             });
+
+            if (!prestasiPelanggaran) {
+                return res.status(404).json({
+                    status: 'error',
+                    message: 'Prestasi/Pelanggaran tidak ditemukan',
+                });
+            }
+
+            // Format respons
+            const formattedData = {
+                id: prestasiPelanggaran.id,
+                nis: prestasiPelanggaran.santri.nis,
+                nama: prestasiPelanggaran.santri.nama,
+                id_santri: prestasiPelanggaran.santri.id,
+                perihal: prestasiPelanggaran.perihal,
+                judul: prestasiPelanggaran.judul,
+                capaian: prestasiPelanggaran.capaian,
+                tanggal: prestasiPelanggaran.tanggal,
+                tempat: prestasiPelanggaran.tempat,
+                deskripsi: prestasiPelanggaran.deskripsi,
+                tipe: prestasiPelanggaran.ref_master_kategori ? prestasiPelanggaran.ref_master_kategori.nama : null,
+                bukti: prestasiPelanggaran.bukti,
+                resolusi: prestasiPelanggaran.resolusi,
+                id_basis_lokasi: prestasiPelanggaran.id_basis_lokasi,
+                tipe_pelanggaran: prestasiPelanggaran.tipe_pelanggaran || null,
+            };
+
+            return res.status(200).json(formattedData);
         } catch (error) {
-            console.error("Error fetching mapel:", error);
-            res.status(500).json({
-                success: false,
-                message: error.message
-            });
+            console.error('Error fetching prestasi/pelanggaran:', error);
+            next(error);
         }
     };
 
-    static updatePrestasiPelanggaran = async (req, res) => {
+    static updatePrestasiPelanggaran = async (req, res, next) => {
         try {
-            const { id, idkur } = req.params;
-            const { kode, nama, kkm_1, kkm_2, kkm_3, keterangan, sifat } = req.body;
+            const { id } = req.params;
+            const data = JSON.parse(req.body.data || '{}');
+            const {
+                id_santri,
+                perihal,
+                judul,
+                capaian,
+                tanggal,
+                tempat,
+                deskripsi,
+                resolusi,
+                id_basis_lokasi,
+                tipe_pelanggaran,
+            } = data;
+            const file_bukti = req.files || [];
 
-            // Check if mapel exists
-            const existingMapel = await prisma.ref_mapel.findFirst({
-                where: {
-                    id: parseInt(id),
-                    id_kurikulum: parseInt(idkur)
-                }
-            });
-
-            if (!existingMapel) {
-                return res.status(404).json({
-                    success: false,
-                    message: "Subject not found"
+            // Validasi ID
+            if (!id || isNaN(parseInt(id))) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'ID prestasi/pelanggaran tidak valid',
                 });
             }
 
-            // If code is being updated, check if it already exists
-            if (kode && kode !== existingMapel.kode) {
-                const kodeExists = await prisma.ref_mapel.findFirst({
-                    where: {
-                        kode,
-                        keterangan,
-                        id_kurikulum: parseInt(idkur),
-                        NOT: {
-                            id: parseInt(id)
-                        }
-                    }
-                });
-
-                if (kodeExists) {
-                    return res.status(400).json({
-                        success: false,
-                        message: "Subject code already exists in this curriculum"
-                    });
-                }
-            }
-
-            const updatedMapel = await prisma.ref_mapel.update({
+            // Cek apakah record ada
+            const existingRecord = await prisma.data_prestasi_pelanggaran.findUnique({
                 where: { id: parseInt(id) },
-                data: {
-                    kode,
-                    nama,
-                    kkm_1,
-                    kkm_2,
-                    kkm_3,
-                    keterangan,
-                    sifat
-                }
             });
 
-            res.json({
-                success: true,
-                data: updatedMapel
+            if (!existingRecord) {
+                return res.status(404).json({
+                    status: 'error',
+                    message: 'Prestasi/Pelanggaran tidak ditemukan',
+                });
+            }
+
+            // Validasi input jika diberikan
+            if (id_santri && !Number.isInteger(id_santri)) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'ID santri tidak valid',
+                });
+            }
+
+            if (perihal && !['prestasi', 'pelanggaran'].includes(perihal)) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Perihal harus prestasi atau pelanggaran',
+                });
+            }
+
+            if (perihal === 'pelanggaran' && tipe_pelanggaran && !['Sekolah', 'Asrama'].includes(tipe_pelanggaran)) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Tipe pelanggaran harus Sekolah atau Asrama',
+                });
+            }
+
+            if (id_basis_lokasi && ![25, 26].includes(parseInt(id_basis_lokasi))) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'ID basis lokasi tidak valid (harus 25 untuk Asrama atau 26 untuk Sekolah)',
+                });
+            }
+
+            // Proses file bukti jika ada
+            let file_bukti_list = existingRecord.bukti ? existingRecord.bukti.split(',') : [];
+            if (file_bukti.length > 0) {
+                const newFiles = file_bukti.map((file) =>
+                    `/uploads/bukti-prpl/${perihal || existingRecord.perihal === 'prestasi' ? 'prestasi' : 'pelanggaran'}/${file.filename}`
+                );
+                file_bukti_list = [...file_bukti_list, ...newFiles];
+            }
+
+            // Siapkan data untuk update
+            const updateData = {
+                id_santri: id_santri ? parseInt(id_santri) : undefined,
+                perihal: perihal || undefined,
+                judul: judul || undefined,
+                capaian: capaian || undefined,
+                tanggal: tanggal ? new Date(tanggal) : undefined,
+                tempat: tempat || undefined,
+                deskripsi: deskripsi || undefined,
+                bukti: file_bukti_list.length > 0 ? file_bukti_list.toString() : undefined,
+                resolusi: resolusi || undefined,
+                id_basis_lokasi: id_basis_lokasi ? parseInt(id_basis_lokasi) : undefined,
+                tipe_pelanggaran: perihal === 'pelanggaran' && tipe_pelanggaran ? tipe_pelanggaran : undefined,
+            };
+
+            // Update record
+            const updatedRecord = await prisma.data_prestasi_pelanggaran.update({
+                where: { id: parseInt(id) },
+                data: updateData,
+                include: {
+                    ref_master_kategori: true,
+                },
+            });
+
+            // Format respons
+            const formattedData = {
+                id: updatedRecord.id,
+                id_santri: updatedRecord.id_santri,
+                perihal: updatedRecord.perihal,
+                judul: updatedRecord.judul,
+                capaian: updatedRecord.capaian,
+                tanggal: updatedRecord.tanggal,
+                tempat: updatedRecord.tempat,
+                deskripsi: updatedRecord.deskripsi,
+                tipe: updatedRecord.ref_master_kategori ? updatedRecord.ref_master_kategori.nama : null,
+                bukti: updatedRecord.bukti,
+                resolusi: updatedRecord.resolusi,
+                id_basis_lokasi: updatedRecord.id_basis_lokasi,
+                tipe_pelanggaran: updatedRecord.tipe_pelanggaran || null,
+            };
+
+            return res.status(200).json({
+                status: 'success',
+                message: 'Prestasi/Pelanggaran berhasil diperbarui',
+                data: formattedData,
             });
         } catch (error) {
-            console.error("Error updating mapel:", error);
-            res.status(500).json({
-                success: false,
-                message: error.message
-            });
+            console.log(error);
+            next(error);
         }
     };
 

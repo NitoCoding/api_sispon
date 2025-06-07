@@ -135,7 +135,7 @@ export class AuthController {
       const accessToken = await JWTService.generateToken({
         userId: validUser.id,
         semester: semester.id,
-      }, "1h");
+      });
       const refreshToken = await JWTService.generateToken(
           {
             userId: validUser.id,

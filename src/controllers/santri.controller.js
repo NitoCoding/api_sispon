@@ -72,7 +72,7 @@ export const createSantri = async (req, res, next) => {
         } = JSON.parse(req.body.data);
 
         // File foto diambil dari multer
-        const foto = req.file ? `/uploads/${req.baseUrl === '/santris' ? 'foto_santri' : 'foto_guru_pegawai'}/${req.file.filename}` : null;
+        const foto = req.file ? `/uploads/${req.baseUrl === '/santris' ? 'foto_santri' : 'foto_guru_pegawai'}/${req.file.filename}` : "";
 
         // Transaksi Prisma
         const result = await prisma.$transaction(async (prisma) => {

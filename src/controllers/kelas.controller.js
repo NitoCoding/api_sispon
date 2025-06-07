@@ -60,7 +60,7 @@ export class KelasController {
       const newKelas = await prisma.ref_kelas.create({
         data: {
           kode,
-          kelas,
+          kelas: kelas.toUpperCase(),
           kapasitas: kapasitas ? parseInt(kapasitas) : null,
           jumlah_meja: jumlah_meja ? parseInt(jumlah_meja) : null,
           meja_rusak: meja_rusak ? parseInt(meja_rusak) : null,

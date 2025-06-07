@@ -9,8 +9,6 @@ export const authenticate = async (req, res, next) => {
       return res.status(401).json({ message: "Token tidak tersedia" });
     }
 
-    // console.log("Authenticating someone...")
-
     let payload;
     try {
       payload = await JWTService.verifyToken(token);

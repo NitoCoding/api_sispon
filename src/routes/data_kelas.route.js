@@ -4,6 +4,9 @@ const router = express.Router();
 import {DataKelasController} from "../controllers/data_kelas.controller.js";
 import {authenticate, checkPermission} from "../middleware/auth.middleware.js";
 
+router.put('/lock-data-kelas/:id', authenticate, checkPermission("DATA-KELAS-UPDATE"), DataKelasController.lockDataKelas);
+router.put('/unlock-data-kelas/:id', authenticate, checkPermission("DATA-KELAS-UPDATE"), DataKelasController.unlockDataKelas);
+
 router.post('/', authenticate, checkPermission("DATA-KELAS-CREATE"), DataKelasController.createDataKelas);
 router.get('/', authenticate, checkPermission("DATA-KELAS-VIEW"), DataKelasController.getAllDataKelas);
 router.get('/:id', authenticate, checkPermission("DATA-KELAS-VIEW"), DataKelasController.getDataKelasById);

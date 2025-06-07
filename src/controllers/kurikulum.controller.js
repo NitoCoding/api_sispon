@@ -1,7 +1,7 @@
-import prisma from '../prisma.js';
+import { prisma } from '../prisma.js';
 
 export class KurikulumController {
-  static createKurikulum = async(req, res, next) =>  {
+  static createKurikulum = async (req, res, next) => {
     try {
       const { nama } = req.body;
 
@@ -25,20 +25,180 @@ export class KurikulumController {
     }
   }
 
-  static getAllKurikulum = async(req, res, next) =>  {
+  static getAllKurikulum = async (req, res, next) => {
     try {
       const kurikulum = await prisma.ref_kurikulum.findMany();
 
-      res.json({
-        success: true,
-        data: kurikulum
-      });
+      res.json(kurikulum);
     } catch (error) {
       next(error);
     }
   }
 
-  static getKurikulumById = async(req, res, next) => {
+  static getAllDetailKurikulum = async (req, res, next) => {
+    try {
+      const kurikulum = await prisma.ref_kurikulum.findMany({
+        include: {
+          ref_mapel: {
+            include: {
+              guru_pegawai: true,
+              data_kompetensi_inti: {
+                // Ubah dari data_kompetensi_dasar ke data_kompetensi_inti
+                include: {
+                  ref_tingkat: true,
+                  data_kompetensi_dasar: true // Sertakan KD yang terkait dengan KI
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Simplify the response with counts for mapel without KI and KI without KD
+      const simplifiedKurikulum = kurikulum.map(k => {
+        // Count mapel without any KIs
+        const mapelWithoutKi = k.ref_mapel.filter(m =>
+            m.data_kompetensi_inti.length === 0
+        ).length;
+
+        return {
+          id_kurikulum: k.id,
+          nama: k.nama,
+          jumlah_mapel_tanpa_ki: mapelWithoutKi,
+          mapel: k.ref_mapel.map(m => {
+            // Group KD by KI
+            const kdByKi = m.data_kompetensi_inti.reduce((acc, ki) => {
+              acc[ki.id] = {
+                id_ki: ki.id,
+                kode_ki: ki.kode_ki || `KI-${ki.id}`,
+                deskripsi_ki: ki.deskripsi,
+                nama: `${ki.kode_ki || 'KI-' + ki.id} - ${ki.ref_tingkat?.nama || 'N/A'}`,
+                kompetensi_dasar: ki.data_kompetensi_dasar.map(kd => ({
+                  id: kd.id,
+                  kode_kd: kd.kode_kd,
+                  deskripsi: kd.deskripsi
+                }))
+              };
+              return acc;
+            }, {});
+
+            // Count KIs without any KDs
+            const kisWithoutKd = m.data_kompetensi_inti.filter(ki =>
+                ki.data_kompetensi_dasar.length === 0
+            ).length;
+
+            return {
+              id_mapel: m.id,
+              nama: m.nama,
+              kode_mapel: m.kode,
+              guru: m.guru_pegawai ? m.guru_pegawai.nama_gp : null,
+              jumlah_ki_tanpa_kd: kisWithoutKd,
+              kompetensi_inti: Object.values(kdByKi)
+            };
+          })
+        };
+      });
+
+      res.json(simplifiedKurikulum);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  static getDetailMapel = async (req, res, next) => {
+    try {
+      const { id_mapel } = req.params;
+
+      // Validasi id_mapel
+      if (!id_mapel || isNaN(parseInt(id_mapel))) {
+        return res.status(400).json({ error: "ID mapel tidak valid" });
+      }
+
+      // Ambil data mapel dengan relasi
+      const mapel = await prisma.ref_mapel.findUnique({
+        where: { id: parseInt(id_mapel) },
+        include: {
+          guru_pegawai: true,
+          data_kompetensi_inti: {
+            include: {
+              ref_tingkat: true,
+              data_kompetensi_dasar: true
+            }
+          },
+          data_kelas: {
+            include: {
+              data_rombel: {
+                include: {
+                  ref_kelas: {
+                    include: {
+                      ref_tingkat: {
+                        include: {
+                          data_kkm_detail: true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          ref_master_kategori_ref_mapel: true
+        }
+      });
+
+      if (!mapel) {
+        return res.status(404).json({ error: "Mapel not found" });
+      }
+
+      // Ambil semua tingkat
+      const allTingkats = await prisma.ref_tingkat.findMany({
+        orderBy: { tingkat: 'asc' }
+      });
+
+      // Group KI and KD by tingkat
+      const kiKdByTingkat = allTingkats.map((tingkat) => {
+        const kompetensiInti = mapel.data_kompetensi_inti
+            .filter(ki => ki.id_tingkat === tingkat.id)
+            .map(ki => ({
+              id_ki: ki.id,
+              kode_ki: ki.kode_ki,
+              deskripsi_ki: ki.deskripsi,
+              kompetensi_dasar: ki.data_kompetensi_dasar.map(kd => ({
+                id: kd.id,
+                kode_kd: kd.kode_kd,
+                deskripsi: kd.deskripsi
+              }))
+            }));
+
+        // Cari KKM untuk tingkat ini
+        const kkmForTingkat = mapel.data_kelas
+            .flatMap(k => k.data_rombel || [])
+            .find(r => r.ref_kelas?.ref_tingkat?.id === tingkat.id)
+            ?.ref_kelas?.ref_tingkat?.data_kkm_detail[0]?.kkm || null;
+
+        return {
+          tingkat: tingkat.nama,
+          kkm: kkmForTingkat,
+          kompetensi_inti: kompetensiInti.length > 0 ? kompetensiInti : null
+        };
+      });
+
+      // Simplified mapel details
+      const simplifiedMapel = {
+        mata_pelajaran: mapel.nama,
+        kategori: mapel.ref_master_kategori_ref_mapel?.nama || null,
+        guru: mapel.guru_pegawai ? mapel.guru_pegawai.nama_gp : null,
+        tujuan_pembelajaran: kiKdByTingkat
+      };
+
+      res.json(simplifiedMapel);
+    } catch (error) {
+      console.log(error);
+      next(error);
+    }
+  };
+
+  static getKurikulumById = async (req, res, next) => {
     try {
       const { id } = req.params;
 
@@ -62,7 +222,7 @@ export class KurikulumController {
     }
   }
 
-  static updateKurikulum = async(req, res, next) =>  {
+  static updateKurikulum = async (req, res, next) => {
     try {
       const { id } = req.params;
       const { nama } = req.body;
@@ -88,7 +248,7 @@ export class KurikulumController {
     }
   }
 
-  static deleteKurikulum = async(req, res, next) =>  {
+  static deleteKurikulum = async (req, res, next) => {
     try {
       const { id } = req.params;
 

@@ -4,6 +4,7 @@ import {JWTService} from "../services/jwt.service.js";
 import {fileURLToPath} from "url";
 import {dirname, join} from "path";
 import { promises as fs } from 'fs';
+import {getTokenPayload} from "../helpers.js";
 
 // Create Guru Pegawai
 export const createGuruPegawai = async (req, res, next) => {
@@ -27,7 +28,7 @@ export const createGuruPegawai = async (req, res, next) => {
             telepon,
         } = JSON.parse(req.body.data);
 
-        const foto_gp = req.file ? `/uploads/${req.baseUrl === '/santris' ? 'foto_santri' : 'foto_guru_pegawai'}/${req.file.filename}` : null;
+        const foto_gp = req.file ? `/uploads/${req.baseUrl === '/santris' ? 'foto_santri' : 'foto_guru_pegawai'}/${req.file.filename}` : "";
 
         // Buat guru pegawai baru
         const newGuruPegawai = await prisma.guru_pegawai.create({

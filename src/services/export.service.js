@@ -8,6 +8,7 @@ import ExcelJS from "exceljs";
 import e from "express";
 import fs from "fs/promises";
 import { AppError } from "../middleware/errorHandler.js";
+import QRCode from "qrcode";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

@@ -1,9 +1,9 @@
-import { AppError } from "../middleware/errorHandler";
+import { AppError } from "../middleware/errorHandler.js";
 import { prisma } from "../prisma.js";
 
 const STATUS = {
-    TAGIHAN_BELUM_LUNAS: 17, //LUNAS
-    TAGIHAN_LUNAS: 18, //BELUM LUNAS
+    TAGIHAN_BELUM_LUNAS: 17, //BELUM LUNAS
+    TAGIHAN_LUNAS: 18, //LUNAS
     POTONGAN_APPLIED: 17, //DISETUJUI
     POTONGAN_PENDING: 18, //DIPROSES
 };
@@ -54,7 +54,10 @@ export class PendapatanLainController {
                 },
             });
 
-            await prisma.$transaction(async (prisma) => {
+            if (!jenis) {
+                return next(new AppError("Jenis pendapatan tidak ditemukan", 404));
+            }
+            const createdPendapatan = await prisma.$transaction(async (prisma) => {
                 const pendapatan = await prisma.data_pendapatan_lain.create({
                     data: {
                         id_jenis,
@@ -97,17 +100,17 @@ export class PendapatanLainController {
                         coa = COA.INVESTASI;
                         break;
                     default:
-                        break;
+                        return next(new AppError(`Jenis pendapatan '${jenis.nama}' tidak valid`, 400));
                 }
                 transaksiKeuangan.push({
                     tanggal: tanggal,
                     nominal: Number(nominal),
-                    keterangan: `Penerimaan ${newKeterangan}`,
+                    keterangan: newKeterangan,
                     no_referensi:
                         nomor_referensi || `TRX${tanggal.getTime()}`,
                     status: "approved",
                     coa_id:
-                        metode_pembayaran != "tunai" ? COA.KAS_BANK : COA.KAS, // Kas
+                        metode_pembayaran !== "tunai" ? COA.KAS_BANK : COA.KAS, // Kas
                     jurnal_id: jurnal.id,
                     created_at: tanggal,
                     updated_at: tanggal,
@@ -131,13 +134,14 @@ export class PendapatanLainController {
                 });
             });
 
-            return res.status(200).json({
+            return res.status(201).json({
                 success: true,
                 message: "Data pendapatan lain berhasil ditambahkan",
-                data: null,
+                data: createdPendapatan,
             });
         } catch (error) {
             return next(new AppError(error.message, 500));
         }
     };
 }
+

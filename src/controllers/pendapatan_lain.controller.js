@@ -54,7 +54,10 @@ export class PendapatanLainController {
                 },
             });
 
-            await prisma.$transaction(async (prisma) => {
+            if (!jenis) {
+                return next(new AppError("Jenis pendapatan tidak ditemukan", 404));
+            }
+            const createdPendapatan = await prisma.$transaction(async (prisma) => {
                 const pendapatan = await prisma.data_pendapatan_lain.create({
                     data: {
                         id_jenis,
@@ -107,7 +110,7 @@ export class PendapatanLainController {
                         nomor_referensi || `TRX${tanggal.getTime()}`,
                     status: "approved",
                     coa_id:
-                        metode_pembayaran != "tunai" ? COA.KAS_BANK : COA.KAS, // Kas
+                        metode_pembayaran !== "tunai" ? COA.KAS_BANK : COA.KAS, // Kas
                     jurnal_id: jurnal.id,
                     created_at: tanggal,
                     updated_at: tanggal,
@@ -131,13 +134,14 @@ export class PendapatanLainController {
                 });
             });
 
-            return res.status(200).json({
+            return res.status(201).json({
                 success: true,
                 message: "Data pendapatan lain berhasil ditambahkan",
-                data: null,
+                data: createdPendapatan,
             });
         } catch (error) {
             return next(new AppError(error.message, 500));
         }
     };
 }
+

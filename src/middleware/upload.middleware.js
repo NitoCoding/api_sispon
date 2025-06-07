@@ -28,6 +28,8 @@ const storage = diskStorage({
             } else if (JSON.parse(req.body.data).perihal === "pelanggaran") {
                 folderName = '/bukti-prpl/pelanggaran';
             }
+        }else if (urlParts.includes('nilai-karakter')) {
+            folderName = 'nilai_karakter';
         }
         const destPath = join(baseDir, folderName);
 
@@ -61,6 +63,10 @@ const storage = diskStorage({
                 name = data.id_santri
                     ? data.id_santri
                     : file.originalname.split('.')[0].toLowerCase().replace(/\s+/g, '-');
+            } else if (urlParts.includes('nilai-karakter')) {
+                name = data.nama
+                    ? data.nama.toLowerCase().replace(/\s+/g, '-')
+                    : file.originalname.split('.')[0].toLowerCase().replace(/\s+/g, '-');
             }
         } catch (err) {
             console.error(`Error parsing request body data: ${err.message}`);
@@ -76,7 +82,7 @@ const storage = diskStorage({
 // Initialize multer middleware
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // File size limit: 5MB
+    limits: { fileSize: 10 * 1024 * 1024 }, // File size limit: 5MB
 });
 
 export { upload };

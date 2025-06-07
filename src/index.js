@@ -91,6 +91,9 @@ import SkemaTagihanRouter  from './routes/skema_tagihan.route.js';
 import dataTagihanRouter from "./routes/data_tagihan.route.js";
 import coaRouter from './routes/coa.route.js';
 
+import masterKarakterRoutes from './routes/master_karakter.route.js';
+import nilaiKarakterRoutes from './routes/nilai_karakter.route.js';
+
 
 app.use('/auth', authRoutes);
 app.use('/tahun-ajarans', tahunAjaranRoutes)
@@ -118,6 +121,9 @@ app.use('/tagihan', tagihanSantriRouter)
 app.use('/skema-tagihan',SkemaTagihanRouter)
 app.use('/data-tagihan-santri', dataTagihanRouter)
 app.use('/coa', coaRouter);
+
+app.use('/master-karakter', masterKarakterRoutes);
+app.use('/nilai-karakter', nilaiKarakterRoutes);
 
 // Error handling
 // import loadRoutes from './loadRoutes.js';

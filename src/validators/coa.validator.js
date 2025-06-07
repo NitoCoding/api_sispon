@@ -33,9 +33,9 @@ export const createCoaValidation = createValidation([
         .isString()
         .withMessage("kategori harus berupa string"),
     body("parent_id")
-        .optional()
-        .isInt()
-        .withMessage("parent harus berupa integer"),
+    .isInt()
+    .withMessage("parent harus berupa integer")
+    .optional({ nullable: true}),
 ])
 
 export const updateCoaValidation = createValidation([
@@ -65,9 +65,9 @@ export const updateCoaValidation = createValidation([
         .isString()
         .withMessage("kategori harus berupa string"),
     body("parent_id")
-        .optional()
         .isInt()
-        .withMessage("parent harus berupa bilangan bulat positif"),
+        .withMessage("parent harus berupa bilangan bulat positif")
+        .optional({ nullable: true}),
 ])
 
 // export const deleteCoaValidation = createValidation([

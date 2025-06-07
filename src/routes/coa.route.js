@@ -1,7 +1,7 @@
 import express from 'express';
 import { CoaController } from '../controllers/coa.controller.js';
 import { createCoaValidation, updateCoaValidation } from '../validators/coa.validator.js';
-import { deleteValidation } from '../validators/param_id.validator.js';
+import { paramValidation } from '../validators/param.validator.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 
 
@@ -13,7 +13,7 @@ router.use(authenticate)
 router.get('/',CoaController.getCoa)
 router.post('/',createCoaValidation, CoaController.createCoa)
 router.put('/:id',updateCoaValidation, CoaController.updateCoa)
-router.delete('/:id', deleteValidation,CoaController.deleteCoa)
+router.delete('/:id', paramValidation,CoaController.deleteCoa)
 
 // router.post('/', )
 

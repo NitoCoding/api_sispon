@@ -32,8 +32,10 @@ export const errorHandler = (err, req, res, next) => {
     timestamp: new Date().toISOString()
   };
 
+  console.log(errorDetails);
+
   // Log the error with more context
-  logger.error('Error:', errorDetails);
+  // logger.error('Error:', errorDetails);
 
   if (process.env.NODE_ENV === 'development') {
     res.status(err.statusCode).json({

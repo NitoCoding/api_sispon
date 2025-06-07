@@ -8,6 +8,9 @@ const router = express.Router();
 // router.use('tagihan_santri', router)
 
 router.get('/:id_santri', DataTagihanSantriController.getDataTagihanSantri)
+ router.get('/:id/detail', DataTagihanSantriController.detailTagihanSantri)
+ router.post('/:id/payment', DataTagihanSantriController.bayarTagihanSantri)
+router.get('/tallum/:nis_santri', DataTagihanSantriController.allowAccessTallum)
 // router.post('/', )
 
 export default router;

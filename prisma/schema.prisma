@@ -85,10 +85,10 @@ model santri {
   data_beasiswa_santri              data_beasiswa_santri[]
   data_eskul                        data_eskul[]
   data_nilai_eskul                  data_nilai_eskul[]
+  data_nilai_karakter               data_nilai_karakter[]
   data_nilai_kelas                  data_nilai_kelas[]
   data_nilai_kti                    data_nilai_kti[]
   data_prestasi_pelanggaran         data_prestasi_pelanggaran[]
-  data_nilai_karakter               data_nilai_karakter[]
   data_rombel_anggota               data_rombel_anggota[]
   data_tagihan_santri               data_tagihan_santri[]
   ref_master_kategori_status_santri ref_master_kategori?        @relation(fields: [id_master_kategori_status_santri], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "santri_ibfk_1")
@@ -370,7 +370,7 @@ model data_nilai_karakter {
   id_semester           Int
   id_basis_lokasi       Int
   ref_kriteria_karakter ref_kriteria_karakter @relation(fields: [id_kriteria], references: [id], onUpdate: Restrict, map: "data_penilaian_karakter_ibfk_1")
-  ref_master_kategori   ref_master_kategori   @relation(fields: [id_basis_lokasi], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "data_penilaian_karakter_ibfk_2")
+  ref_master_kategori   ref_master_kategori   @relation(fields: [id_basis_lokasi], references: [id], onUpdate: Restrict, map: "data_penilaian_karakter_ibfk_2")
   santri                santri                @relation(fields: [id_santri], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "data_penilaian_karakter_ibfk_3")
 
   @@unique([id_santri, id_tahun_ajaran, id_semester, id_kriteria, id_basis_lokasi, bulan, minggu], map: "data_penilaian_karakter_unique")
@@ -539,21 +539,20 @@ model ref_master_kategori {
   data_eskul                                                                      data_eskul[]
   data_kelas_data_kelas_id_master_kategori_status_data_kelasToref_master_kategori data_kelas[]                   @relation("data_kelas_id_master_kategori_status_data_kelasToref_master_kategori")
   data_kelas_data_kelas_id_master_kategori_tipe_data_kelasToref_master_kategori   data_kelas[]                   @relation("data_kelas_id_master_kategori_tipe_data_kelasToref_master_kategori")
+  data_penilaian_karakter                                                         data_nilai_karakter[]
   data_pendapatan_lain_data_pendapatan_lain_id_statusToref_master_kategori        data_pendapatan_lain[]         @relation("data_pendapatan_lain_id_statusToref_master_kategori")
   data_pengeluaran_lain_data_pengeluaran_lain_id_statusToref_master_kategori      data_pengeluaran_lain[]        @relation("data_pengeluaran_lain_id_statusToref_master_kategori")
-  data_penilaian_karakter                                                         data_nilai_karakter[]
   data_prestasi_pelanggaran                                                       data_prestasi_pelanggaran[]
   data_rombel                                                                     data_rombel[]
   data_rombel_anggota                                                             data_rombel_anggota[]
   data_tagihan_santri                                                             data_tagihan_santri[]
   data_tagihan_santri_potongan                                                    data_tagihan_santri_potongan[]
+  ref_instrumen_keuangan                                                          ref_instrumen_keuangan[]
   ref_kriteria_karakter                                                           ref_kriteria_karakter[]
   ref_mapel                                                                       ref_mapel[]
   ref_semester                                                                    ref_semester[]
   ref_tahun_ajaran                                                                ref_tahun_ajaran[]
   santri                                                                          santri[]
-
-  ref_instrumen_keuangan ref_instrumen_keuangan[] @relation(map: "ref_instrumen_keuangan_ibfk_2")
 }
 
 model ref_kurikulum {
@@ -795,7 +794,7 @@ model coa {
   child_coa              coa[]                     @relation("coaParentChild")
   coa_saldo              coa_saldo[]
   transaksi              data_transaksi_keuangan[]
-  ref_instrumen_keuangan ref_instrumen_keuangan[]  @relation(map: "ref_instrumen_keuangan_ibfk_1")
+  ref_instrumen_keuangan ref_instrumen_keuangan[]
 
   @@index([parent_id], map: "coa_parent_id_fkey")
 }
@@ -843,19 +842,19 @@ model coa_saldo {
 }
 
 model ref_instrumen_keuangan {
-  id         Int                  @id @default(autoincrement())
-  nama       String               @db.VarChar(100)
-  // deskripsi   String?                 @db.Text
-  id_coa     Int
-  tipe       Int
-  created_at DateTime             @default(now()) @db.Timestamp(0)
-  updated_at DateTime?            @db.Timestamp(0)
-  coa        coa                  @relation(fields: [id_coa], references: [id], onUpdate: Restrict, map: "ref_instrumen_keuangan_ibfk_1")
-  ref_tipe   ref_master_kategori? @relation(fields: [tipe], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "ref_instrumen_keuangan_ibfk_2")
-
+  id                    Int                     @id @default(autoincrement())
+  nama                  String                  @db.VarChar(100)
+  id_coa                Int
+  tipe                  Int
+  created_at            DateTime                @default(now()) @db.Timestamp(0)
+  updated_at            DateTime?               @db.Timestamp(0)
+  data_pendapatan_lain  data_pendapatan_lain[]  @relation("data_pendapatan_lain_id_jenisToref_master_kategori")
   data_pengeluaran_lain data_pengeluaran_lain[] @relation("data_pengeluaran_lain_id_jenisToref_master_kategori")
+  coa                   coa                     @relation(fields: [id_coa], references: [id], onUpdate: Restrict, map: "ref_instrumen_keuangan_ibfk_1")
+  ref_tipe              ref_master_kategori     @relation(fields: [tipe], references: [id], onUpdate: Restrict, map: "ref_instrumen_keuangan_ibfk_2")
 
-  data_pendapatan_lain data_pendapatan_lain[] @relation("data_pendapatan_lain_id_jenisToref_master_kategori")
+  @@index([id_coa], map: "ref_instrumen_keuangan_ibfk_1")
+  @@index([tipe], map: "ref_instrumen_keuangan_ibfk_2")
 }
 
 model ref_jenjang {
@@ -1020,14 +1019,6 @@ enum data_kehadiran_pegawai_status {
 enum data_kelas_gender {
   putra
   putri
-}
-
-enum data_penilaian_karakter_nilai {
-  A
-  B
-  C
-  D
-  E
 }
 
 enum data_tagihan_santri_metode_pembayaran {

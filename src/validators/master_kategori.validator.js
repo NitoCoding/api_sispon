@@ -21,8 +21,8 @@ export const createKategoriKarakterValidation = createValidation([
 		.isString()
 		.withMessage("Deskripsi must be a string")
 		.trim()
-		.isLength({ min: 1, max: 500 })
-		.withMessage("Deskripsi must be between 1 and 500 characters"),
+		.isLength({ min: 0, max: 500 })
+		.withMessage("Deskripsi max length 500 characters"),
 ]);
 
 export const updateKategoriKarakterValidation = createValidation([
@@ -48,7 +48,7 @@ export const updateKategoriKarakterValidation = createValidation([
         .withMessage("Deskripsi must be a string")
         .trim()
         .isLength({ min: 1, max: 500 })
-        .withMessage("Deskripsi must be between 10 and 500 characters"),
+        .withMessage("Deskripsi max length 500 characters"),
 ]);
 
 export const deleteKategoriKarakterValidation = createValidation([

@@ -2,11 +2,11 @@ import { AppError } from "../middleware/errorHandler.js";
 import { prisma } from "../prisma.js";
 
 const STATUS = {
-    TAGIHAN_BELUM_LUNAS: 17, //LUNAS
-    TAGIHAN_LUNAS: 18, //BELUM LUNAS
-    POTONGAN_APPLIED: 17, //DISETUJUI
-    POTONGAN_PENDING: 18, //DIPROSES
-}
+    TAGIHAN_BELUM_LUNAS: 17, //BELUM LUNAS
+    TAGIHAN_LUNAS: 18, //LUNAS
+    POTONGAN_APPLIED: 19, //DISETUJUI
+    POTONGAN_PENDING: 20, //DIPROSES
+ }
 
 export class BeasiswaSantriController {
     static getBeasiswaSantri = async (req, res, next) => {
@@ -73,14 +73,14 @@ export class BeasiswaSantriController {
                 throw new AppError("Tanggal mulai harus sebelum tanggal selesai", 400);
             }
 
-            const newBeasiswa = await prisma.data_beasiswa_santri.create({
-                data: {
-                    id_santri: parseInt(id_santri),
-                    id_beasiswa: parseInt(id_jenis_beasiswa),
-                    status: parseInt(status) ? 21 : 22,
-                    tanggal_mulai: new Date(tanggal_mulai),
-                    tanggal_selesai: new Date(tanggal_selesai),
-                    keterangan: `Beasiswa ${jenis_beasiswa.nama} untuk siswa ${santri.nama}`,
+const newBeasiswa = await prisma.data_beasiswa_santri.create({
+                 data: {
+                     id_santri: parseInt(id_santri),
+                     id_beasiswa: parseInt(id_jenis_beasiswa),
+                    status: status ? 21 : 22,
+                     tanggal_mulai: new Date(tanggal_mulai),
+                     tanggal_selesai: new Date(tanggal_selesai),
+                     keterangan: `Beasiswa ${jenis_beasiswa.nama} untuk siswa ${santri.nama}`,
                     created_at: new Date(),
                     updated_at: new Date(),
                 },
@@ -222,13 +222,13 @@ export class BeasiswaSantriController {
             }
 
             await prisma.$transaction(async (tx) => {
-                await tx.data_tagihan_santri_potongan.update({
-                    where: {
-                        id: parseInt(id),
-                        // id_status: STATUS.POTONGAN_PENDING,
-                    },
-                    data: {
-                        id_status: STATUS.POTONGAN_APPLIED,
+await tx.data_tagihan_santri_potongan.update({
+                     where: {
+                         id: parseInt(id),
+                        id_status: STATUS.POTONGAN_PENDING,
+                     },
+                     data: {
+                         id_status: STATUS.POTONGAN_APPLIED,
                         updated_at: new Date(),
                     },
                 });
@@ -302,7 +302,7 @@ export class BeasiswaSantriController {
                 return next(new AppError("keterangan harus diisi", 400));
             }
 
-            const santri = await prisma.data_santri.findUnique({
+            const santri = await prisma.santri.findUnique({
                 where: {
                     id: id_santri
                 }

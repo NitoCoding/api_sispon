@@ -7,6 +7,7 @@ import { authenticate } from '../middleware/auth.middleware.js';
 router.use(authenticate);
 
 router.get('/sync', KelasController.migrateKelas);
+router.get('/tingkat', KelasController.getTingkat);
 
 router.post('/', KelasController.createKelas);
 router.get('/', KelasController.getAllKelas);

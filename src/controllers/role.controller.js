@@ -1,122 +1,149 @@
-import { AppError } from "../middleware/errorHandler.js";
-import { prisma } from "../prisma.js";
+import { prisma } from '../prisma.js';
+import { encrypt, decrypt } from '../helpers.js';
+import mysql from 'mysql2/promise';
 
 export class RoleController {
-    static getAllRole = async (req, res, next) => {
+
+    static createRole = async (req, res, next) => {
         try {
-            const roles = await prisma.roles.findMany({
-                include: {
-                    user: true,
-                },
+            const { role_code, role_name } = req.body;
+
+            // Validasi input
+            if (!role_code || !role_name) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Role code and name are required'
+                });
+            }
+
+            // Cek duplikasi role_code
+            const existingRole = await prisma.roles.findUnique({
+                where: { role_code }
             });
-            return res.status(200).json({
-                success: true,
-                message: "Get all roles successfully",
-                data: roles,
+
+            if (existingRole) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Role code already exists'
+                });
+            }
+
+            const role = await prisma.roles.create({
+                data: {
+                    role_code,
+                    role_name
+                }
             });
+
+            return res.status(201).json(role);
         } catch (error) {
-            next(new AppError(error.message, 500));
+            next(error);
         }
-    };
+    }
+
+    static getAllRoles = async (req, res, next) => {
+        try {
+            const roles = await prisma.roles.findMany({});
+
+            return res.status(200).json(roles);
+        } catch (error) {
+            next(error);
+        }
+    }
 
     static getRoleById = async (req, res, next) => {
         try {
             const { id } = req.params;
+
             const role = await prisma.roles.findUnique({
                 where: { id: parseInt(id) },
-                include: {
-                    user: true,
-                },
             });
+
             if (!role) {
                 return res.status(404).json({
                     success: false,
-                    message: "Role not found",
+                    message: 'Role not found'
                 });
             }
-            return res.status(200).json({
-                success: true,
-                message: "Get role successfully",
-                data: role,
-            });
-        } catch (error) {
-            next(new AppError(error.message, 500));
-        }
-    };
 
-    static createRole = async (req, res, next) => {
-        try {
-            const { name } = req.body;
-            const role = await prisma.roles.create({
-                data: {
-                    name,
-                },
-            });
-            return res.status(201).json({
-                success: true,
-                message: "Create role successfully",
-                data: role,
-            });
+            return res.status(200).json(role);
         } catch (error) {
-            next(new AppError(error.message, 500));
+            next(error);
         }
-    };
+    }
 
     static updateRole = async (req, res, next) => {
         try {
             const { id } = req.params;
-            const { name } = req.body;
-            const role = await prisma.roles.update({
+            const { role_code, role_name } = req.body;
+
+            // Cek apakah role ada
+            const role = await prisma.roles.findUnique({
+                where: { id: parseInt(id) }
+            });
+
+            if (!role) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Role not found'
+                });
+            }
+
+            // Validasi role_code unik jika diubah
+            if (role_code && role_code !== role.role_code) {
+                const existingRole = await prisma.roles.findUnique({
+                    where: { role_code }
+                });
+
+                if (existingRole) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Role code already exists'
+                    });
+                }
+            }
+
+            const updatedRole = await prisma.roles.update({
                 where: { id: parseInt(id) },
                 data: {
-                    name,
-                },
+                    role_code: role_code || role.role_code,
+                    role_name: role_name || role.role_name
+                }
             });
-            return res.status(200).json({
-                success: true,
-                message: "Update role successfully",
-                data: role,
-            });
+
+            return res.status(200).json(updatedRole);
         } catch (error) {
-            next(new AppError(error.message, 500));
+            next(error);
         }
-    };
+    }
 
     static deleteRole = async (req, res, next) => {
         try {
             const { id } = req.params;
-            const role = await prisma.roles.delete({
-                where: { id: parseInt(id) },
+
+            // Cek apakah role ada
+            const role = await prisma.roles.findUnique({
+                where: { id: parseInt(id) }
             });
+
+            if (!role) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Role not found'
+                });
+            }
+
+            // Hapus role
+            await prisma.roles.delete({
+                where: { id: parseInt(id) }
+            });
+
             return res.status(200).json({
                 success: true,
-                message: "Delete role successfully",
-                data: role,
+                message: 'Role deleted successfully'
             });
         } catch (error) {
-            next(new AppError(error.message, 500));
+            next(error);
         }
-    };
-
-    static getRoleByUserId = async (req, res, next) => {
-        try {
-            const { id } = req.params;
-            const role = await prisma.roles.findMany({
-                where: { id_user: parseInt(id) },
-                include: {
-                    users: true,
-                },
-            });
-            return res.status(200).json({
-                success: true,
-                message: "Get role by user id successfully",
-                data: role,
-            });
-        } catch (error) {
-            next(new AppError(error.message, 500));
-        }
-    };
-
-
-
+    }
 }

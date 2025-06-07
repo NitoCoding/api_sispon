@@ -4,23 +4,32 @@ import { prisma } from '../prisma.js';
 export class TaController {
 
 
-static getAllTahunAjaran = async (req, res) => {
+static getAllTahunAjaran = async (req, res, next) => {
   try {
     const tahunAjaran = await prisma.ref_tahun_ajaran.findMany({
       orderBy: {
         tahun_mulai: 'desc'
+      },
+      include: {
+        ref_master_kategori_status_ref_tahun_ajaran: true
       }
     });
-    res.status(200).json(tahunAjaran);
-  } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: error.message
+
+    const mappedTahunAjaran = tahunAjaran.map((ta) => {
+        const { ref_master_kategori_status_ref_tahun_ajaran, ...rest } = ta;
+        return {
+            ...rest,
+            status: ref_master_kategori_status_ref_tahun_ajaran.nama
+        };
     });
+
+    res.status(200).json(mappedTahunAjaran);
+  } catch (error) {
+    next(error);
   }
 };
 
-static getTahunAjaranById = async (req, res) => {
+static getTahunAjaranById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const tahunAjaran = await prisma.ref_tahun_ajaran.findUnique({
@@ -39,14 +48,11 @@ static getTahunAjaranById = async (req, res) => {
       data: tahunAjaran
     });
   } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: error.message
-    });
+    next(error);
   }
 };
 
-static createTahunAjaran = async (req, res) => {
+static createTahunAjaran = async (req, res, next) => {
   try {
     const { tahun_mulai, tahun_selesai, status } = req.body;
     const nama = `${tahun_mulai}/${tahun_selesai}`;
@@ -85,14 +91,11 @@ static createTahunAjaran = async (req, res) => {
 
     res.status(201).json(tahunAjaran);
   } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: error.message
-    });
+    next(error);
   }
 };
 
-static updateTahunAjaran = async (req, res) => {
+static updateTahunAjaran = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { nama, tahun_mulai, tahun_selesai, status } = req.body;
@@ -166,14 +169,11 @@ static updateTahunAjaran = async (req, res) => {
       data: updatedTahunAjaran
     });
   } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: error.message
-    });
+    next(error);
   }
 };
 
-static deleteTahunAjaran = async (req, res) => {
+static deleteTahunAjaran = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -209,10 +209,7 @@ static deleteTahunAjaran = async (req, res) => {
       message: 'Tahun ajaran berhasil dihapus'
     });
   } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: error.message
-    });
+    next(error);
   }
 };
 

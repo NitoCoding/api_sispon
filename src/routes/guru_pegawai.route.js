@@ -2,10 +2,20 @@ import express from 'express';
 
 const router = express.Router();
 
+import {
+    createGuruPegawai, deleteGuruPegawai,
+    getAllGuruPegawai, getAllGuruPegawaiLogin,
+    getGuruPegawaiById, getGuruPegawaiDetails, getIsWaliGuruPegawai, migrateGuruPegawai,
+    updateGuruPegawai, updateGuruPegawaiDetails
+} from "../controllers/guru_pegawai.controller.js";
+import { authenticate } from '../middleware/auth.middleware.js';
+import {upload} from "../middleware/upload.middleware.js";
 
-import { authenticate, checkPermission } from '../middleware/auth.middleware.js';
-import { upload } from "../middleware/upload.middleware.js";
-import { PegawaiController } from '../controllers/guru_pegawai.controller.js';
+router.get('/login', getAllGuruPegawaiLogin);
+router.get('/sync', migrateGuruPegawai);
+router.get('/details', authenticate, getGuruPegawaiDetails);
+router.put('/details', authenticate, upload.single("foto"), updateGuruPegawaiDetails);
+router.get('/iswali', authenticate, getIsWaliGuruPegawai);
 
 router.get('/sync',PegawaiController.migrateGuruPegawai);
 router.get('/details', authenticate, checkPermission('PEGAWAI-VIEW') ,PegawaiController.getGuruPegawaiDetails);

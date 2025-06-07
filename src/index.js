@@ -14,18 +14,23 @@ const app = express();
 
 // Security Middleware
 app.use(helmet()); // Helps secure Express apps with various HTTP headers
-app.use(cors()); // Enable Cross-Origin Resource Sharing
+app.use(cors({
+  exposedHeaders: ['new-authorization'], // Izinkan header kustom
+})); // Enable Cross-Origin Resource Sharing
 app.use(compression()); // Compress response bodies
 
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 10000 // limit each IP to 100 requests per windowMs
 });
 app.use(limiter);
 
 // Request logging
-app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
+// app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
+app.use(morgan(':method :url :status', {
+  stream: { write: message => logger.info(message.trim()) }
+}));
 
 // Body parsing
 app.use(express.json({ limit: '10kb' })); // Body limit is 10kb
@@ -63,6 +68,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 app.use('/images', express.static(path.join(__dirname, '../public/pdf_template/images')));
+app.use('/pdf_template', express.static(path.join(__dirname, '../public/pdf_template')));
 
 import * as path from "node:path";
 // // API Routes
@@ -83,6 +89,18 @@ import masterKategoriRoutes from './routes/master_kategori.route.js';
 import ekskulSantriRoutes from "./routes/ekskul_santri.route.js";
 import ekskulRoute from "./routes/ekskul.route.js";
 import prestasiPelanggaranRoute from "./routes/prestasi_pelanggaran.route.js";
+import rolesRoutes from "./routes/role.route.js";
+import dataKelasRoutes from "./routes/data_kelas.route.js";
+import rombelKelasRoutes from "./routes/rombel_kelas.route.js";
+import mapelRoute from "./routes/mapel.route.js";
+import komponenRoutes from "./routes/komponen.route.js";
+import rencanaPenilaianRoutes from "./routes/rencana_penilaian.route.js";
+import kurikulumRoutes from "./routes/kurikulum.route.js";
+import jamPelajaranRoutes from "./routes/jam_pelajaran.route.js";
+import raporRoutes from "./routes/rapor.route.js";
+import kkmRoutes from "./routes/kkm.route.js";
+import rosterRoutes from "./routes/roster.route.js";
+import kompetensiRoutes from "./routes/kompetensi.route.js";
 import beasiswaRouter from "./routes/beasiswa.route.js";
 import beasiswsSantriRouter from "./routes/beasiswa_santri.route.js";
 
@@ -116,6 +134,18 @@ app.use('/ekskuls', ekskulRoute);
 app.use('/beasiswa', beasiswaRouter)
 app.use('/beasiswa-santris', beasiswsSantriRouter)
 app.use('/prestasi-pelanggarans', prestasiPelanggaranRoute);
+app.use('/roles', rolesRoutes);
+app.use('/data-kelas', dataKelasRoutes);
+app.use('/rombel-kelas', rombelKelasRoutes);
+app.use('/mapels', mapelRoute);
+app.use('/komponens', komponenRoutes);
+app.use('/rencana-penilaians', rencanaPenilaianRoutes);
+app.use('/kurikulums', kurikulumRoutes);
+app.use('/jam-pelajarans', jamPelajaranRoutes);
+app.use('/rapors', raporRoutes);
+app.use('/kkms', kkmRoutes);
+app.use('/rosters', rosterRoutes);
+app.use('/kompetensis', kompetensiRoutes);
 
 app.use('/tagihan', tagihanSantriRouter)
 app.use('/skema-tagihan',SkemaTagihanRouter)

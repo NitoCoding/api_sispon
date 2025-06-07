@@ -30,6 +30,10 @@ const storage = diskStorage({
             }
         }else if (urlParts.includes('nilai-karakter')) {
             folderName = 'nilai_karakter';
+        } else if (urlParts.includes('rombels')) {
+            folderName = 'ttd_gp';
+        } else if (urlParts.includes('rapors')) {
+            folderName = 'ttd_kepsek';
         }
         const destPath = join(baseDir, folderName);
 
@@ -67,6 +71,10 @@ const storage = diskStorage({
                 name = data.nama
                     ? data.nama.toLowerCase().replace(/\s+/g, '-')
                     : file.originalname.split('.')[0].toLowerCase().replace(/\s+/g, '-');
+            } else if (urlParts.includes('rombels')) {
+                name = 'ttd'
+            } else if (urlParts.includes('rapors')) {
+                name = 'ttd-kepsek'
             }
         } catch (err) {
             console.error(`Error parsing request body data: ${err.message}`);
@@ -77,7 +85,6 @@ const storage = diskStorage({
         cb(null, `${name}-${uniqueSuffix}${extname(file.originalname)}`);
     },
 });
-
 
 // Initialize multer middleware
 const upload = multer({

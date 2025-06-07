@@ -1,12 +1,20 @@
-import crypto from "crypto";
-import { config } from "./config/index.js";
-import { AppError } from "./middleware/errorHandler.js";
-import ejs from "ejs";
-import wkhtmltopdf from "wkhtmltopdf";
-import { JWTService } from "./services/jwt.service.js";
-import { prisma } from "./prisma.js";
+import crypto from 'crypto';
+import { config } from './config/index.js';
+import { AppError } from './middleware/errorHandler.js';
+import ejs from 'ejs';
+import wkhtmltopdf from 'wkhtmltopdf';
+import {JWTService} from "./services/jwt.service.js";
+import {prisma} from "./prisma.js";
+import res from "express/lib/response.js";
+import path, {dirname} from "path";
+import {fileURLToPath} from "url";
+import fs from 'fs';
 
-const algorithm = "aes-256-cbc";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+
+const algorithm = 'aes-256-cbc';
 const secret = config.secretKey;
 
 if (!secret) {
@@ -73,14 +81,18 @@ export const trimmedString = (str) => {
 export const getTokenPayload = async (req) => {
 	const token = req.headers.authorization?.split(" ")[1];
 
-	if (!token) {
-		throw new AppError("Unauthorized", 401);
-	}
-	const decoded = JWTService.decodeToken(token);
-	const semesterId = Number(decoded.semester);
-	if (!Number.isInteger(semesterId)) {
-		throw new AppError("Invalid token: Semester id is not a number", 400);
-	}
+        // Configure wkhtmltopdf options
+        const pdfOptions = {
+            output: null,
+            pageSize: 'Folio',
+            orientation: orientation,
+            marginTop: '1cm',
+            marginBottom: '2cm',
+            marginLeft: '1cm',
+            marginRight: '1cm',
+            enableLocalFileAccess: true,
+            // headerHtml: orientation === "Portrait"? path.join(__dirname, '../public/pdf_template/watermark-p.html') : path.join(__dirname, '../public/pdf_template/watermark-l.html'),
+        };
 
 	const semester = await prisma.ref_semester.findUnique({
 		where: { id: semesterId },
@@ -104,3 +116,34 @@ export const getTokenPayload = async (req) => {
 
 	return { decoded, semester, tahunAjaran, user };
 };
+
+export const getTokenPayload = async (req) => {
+    const token = req.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
+    const decoded = JWTService.decodeToken(token);
+    const semester = await prisma.ref_semester.findFirst({
+        where: { id: parseInt(decoded.semester) },
+    });
+
+    if (!semester) {
+        return res.status(400).json({ message: "Invalid token: Missing semester" });
+    }
+
+    // Ambil tahun ajaran aktif
+    const tahunAjaran = await prisma.ref_tahun_ajaran.findFirst({
+        where: { id: semester.id_tahun_ajaran },
+    });
+    if (!tahunAjaran) {
+        return res.status(404).json({ message: "Academic year not found" });
+    }
+
+    const user = await prisma.users.findFirst({
+        where: { id: parseInt(decoded.userId) },
+    });
+
+    return { decoded, semester, tahunAjaran, user };
+
+}

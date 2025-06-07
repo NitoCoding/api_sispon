@@ -1,47 +1,64 @@
-import { AppError } from "../middleware/errorHandler.js";
-import { prisma } from "../prisma.js";
-import { encrypt, decrypt } from "../helpers.js";
-import mysql from "mysql2/promise";
+import { AppError } from '../middleware/errorHandler.js';
+import { prisma } from '../prisma.js';
+import {encrypt, decrypt, getTokenPayload} from '../helpers.js';
+import mysql from 'mysql2/promise';
 
-export class UserController {
-  static createUser = async (req, res, next) => {
-    try {
-      const { kode_pegawai, password, role } = req.body;
+// Create User
+export const createUser = async (req, res, next) => {
+  try {
+    const { kode_pegawai, password, role_id} = req.body;
 
       // Encrypt password sebelum disimpan
       const encryptedPassword = encrypt(password);
 
-      // Buat user baru
-      const newUser = await prisma.users.create({
-        data: {
-          kode_pegawai,
-          password: encryptedPassword, // Simpan password yang sudah dienkripsi
-          role,
-        },
-      });
+    // Buat user baru
+    const newUser = await prisma.users.create({
+      data: {
+        kode_pegawai,
+        password: encryptedPassword, // Simpan password yang sudah dienkripsi
+        role_id: parseInt(role_id), // Simpan role_id
+      },
+    });
 
-      res
-        .status(201)
-        .json({ message: "User created successfully", user: newUser });
-    } catch (error) {
-      next(error);
-    }
-  };
+    res.status(201).json({ message: 'Berhasil menambahkan pengguna', user: newUser });
+  } catch (error) {
+    next(error);
+  }
+};
 
-  // Get All Users
-  static getAllUsers = async (req, res, next) => {
-    try {
-      const users = await prisma.users.findMany({
-        select: {
-          id: true,
-          kode_pegawai: true,
-          role: true,
-        },
-      });
+// Get All Users
+export const getAllUsers = async (req, res, next) => {
+  try {
+    const users = await prisma.users.findMany({
+      select: {
+        id: true,
+        kode_pegawai: true,
+        role_id: true,
+      },
+    });
 
-      res.status(200).json(users);
-    } catch (error) {
-      next(error);
+    res.status(200).json(users);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get User by ID
+export const getUserById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const user = await prisma.users.findUnique({
+      where: { id: parseInt(id) },
+      select: {
+        id: true,
+        kode_pegawai: true,
+        role_id: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Pengguna tidak ditemukan' });
     }
   };
 
@@ -50,22 +67,18 @@ export class UserController {
     try {
       const { id } = req.params;
 
-      const user = await prisma.users.findUnique({
-        where: { id: parseInt(id) },
-        select: {
-          id: true,
-          kode_pegawai: true,
-          role: true,
-        },
-      });
+// Update User
+export const updateUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { kode_pegawai, password, role_id } = req.body;
 
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      res.status(200).json(user);
-    } catch (error) {
-      next(error);
+    if (!existingUser) {
+      return res.status(404).json({ message: 'Pengguna tidak ditemukan' });
     }
   };
 
@@ -75,34 +88,93 @@ export class UserController {
       const { id } = req.params;
       const { kode_pegawai, password, role } = req.body;
 
-      // Cek apakah user ada
-      const existingUser = await prisma.users.findUnique({
-        where: { id: parseInt(id) },
-      });
+    // Update user
+    const updatedUser = await prisma.users.update({
+      where: { id: parseInt(id) },
+      data: {
+        kode_pegawai,
+        password: encryptedPassword, // Simpan password yang sudah dienkripsi
+        role_id,
+      },
+    });
 
-      if (!existingUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
+    res.status(200).json({ message: 'User berhasil diperbarui', user: updatedUser });
+  } catch (error) {
+    next(error);
+  }
+};
 
       // Encrypt password jika ada
       const encryptedPassword = password
         ? encrypt(password)
         : existingUser.password;
 
+    // Cek apakah user ada
+    const existingUser = await prisma.users.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({ message: 'Pengguna tidak ditemukan' });
+    }
+
     // Hapus user
     await prisma.users.delete({
       where: { id: parseInt(id) },
     });
 
-    res.status(200).json({ message: 'User deleted successfully' });
+    res.status(200).json({ message: 'Pengguna berhasil dihapus' });
   } catch (error) {
     next(error);
   }
 };
 
-static fillRole = async (req, res, next) => {
-  try {
+export const getUserRoles = async (req, res, next) => {
+    try {
+        const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
 
+        const login_account = await prisma.users.findFirst({
+            where: {
+              id: parseInt(decoded.userId),
+            },
+            include: {
+              roles: true
+            }
+        });
+
+        const account_list = await prisma.users.findMany({
+            where: {
+                AND: [
+                    { kode_pegawai: parseInt(login_account.kode_pegawai) },
+                    { NOT: [{ id: login_account.id }] },
+                ]
+            },
+            include: {
+              roles: true
+            }
+        });
+
+        const { roles: login_roles, ...rest } = login_account;
+
+        const roles_list = account_list.map((account) => {
+            const { roles, ...rest } = account;
+            return roles;
+        });
+
+        const result = {
+          login_role: login_roles,
+          another_role: roles_list,
+        };
+
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
+export const fillRole = async (req, res, next) => {
+  try {
+``
     const kode = {
       'k': 'Kepala Sekolah',
       'r': 'Kurikulum',

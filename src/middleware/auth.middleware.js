@@ -6,22 +6,21 @@ export const authenticate = async (req, res, next) => {
     const token = JWTService.extractTokenFromHeader(req);
 
     if (!token) {
-      return res.status(401).json({ message: "No token provided" });
+      return res.status(401).json({ message: "Token tidak tersedia" });
     }
 
     let payload;
     try {
-      payload  = await JWTService.verifyToken(token);
+      payload = await JWTService.verifyToken(token);
+
       if (!payload.userId || !payload.semester) {
-        return res.status(403).json({ message: "Invalid access token" });
+        return res.status(403).json({ message: "Token akses tidak valid" });
       }
       req.user = await prisma.users.findUnique({
         where: {id: payload.userId},
       });
-      // console.log(payload)
-      req.payload = payload;
+      // console.log("Token valid & authenticated as", req.user);
     } catch (err) {
-      console.log(err.message);
       if (err.message === "Token has expired") {
         // Token expired, coba refresh token
         const refreshTokenRecord = await prisma.refresh_token.findFirst({
@@ -29,7 +28,7 @@ export const authenticate = async (req, res, next) => {
         });
 
         if (!refreshTokenRecord) {
-          return res.status(403).json({ message: "No refresh token found for this user" });
+          return res.status(403).json({ message: "Token pembaruan tidak ditemukan untuk pengguna ini" });
         }
 
         try {
@@ -40,7 +39,7 @@ export const authenticate = async (req, res, next) => {
           });
 
           if (!newAccessUser) {
-            return res.status(403).json({ message: "User not found" });
+            return res.status(403).json({ message: "Pengguna tidak ditemukan" });
           }
 
           const newAccessToken = await JWTService.generateToken({
@@ -48,18 +47,20 @@ export const authenticate = async (req, res, next) => {
             semester: JWTService.decodeToken(token).semester,
           });
           req.user = newAccessUser;
+          // console.log("Token invalid & authenticated as", req.user);
           res.setHeader("new-authorization", `Bearer ${newAccessToken}`);
-          return next();
+          // return next();
+            return res.status(401).json({ message: "Token telah kadaluwarsa" });
         } catch (refreshErr) {
-          return res.status(403).json({ message: "Invalid refresh token" });
+          return res.status(403).json({ message: "Token pembaruan untuk pengguna ini tidak valid" });
         }
       }
-      return res.status(403).json({ message: "Invalid token" });
+      return res.status(403).json({ message: "Token tidak valid" });
     }
 
     next();
   } catch (err) {
-    res.status(500).json({ message: "Authentication failed", error: err.message });
+    next(err);
   }
 };
 
@@ -69,8 +70,10 @@ export const checkPermission = (requiredPermission) => {
       const userId = req.user?.id;
       const roleId = req.user?.role_id;
 
+      // console.log("Checking permission for userId:", userId, "and roleId:", roleId, "to access:", requiredPermission);
+
       if (!userId || !roleId) {
-        return res.status(401).json({ message: 'Unauthorized' });
+        return res.status(401).json({ message: 'Informasi role pengguna tidak ditemukan' });
       }
 
       // Ambil izin dari role_permissions
@@ -114,15 +117,15 @@ export const checkPermission = (requiredPermission) => {
         ...temporaryPermissions.map(tp => tp.permissions.permission_code),
       ];
 
+      // console.log("Permissions for userId:", userId, "and roleId:", roleId, "are:", permissions);
+
       // Cek apakah requiredPermission ada di daftar izin
       const hasPermission = permissions.includes(requiredPermission);
-
-      console.log('User permissions:', permissions);
-      console.log('Has permission:', hasPermission);
-
       if (!hasPermission) {
-        return res.status(403).json({ message: 'Forbidden' });
+        return res.status(403).json({ message: 'Pengguna tidak diizinkan mengakses fitur ini' });
       }
+
+      // console.log("Permissions for userId:", userId, "to access:", requiredPermission, "is", hasPermission);
 
       next();
     } catch (error) {

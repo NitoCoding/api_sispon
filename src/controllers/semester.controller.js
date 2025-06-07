@@ -3,237 +3,557 @@ import mysql from 'mysql2/promise';
 import { JWTService } from '../services/jwt.service.js';
 import { AppError } from '../middleware/errorHandler.js';
 
-export class SemesterController {
-  static createSemester = async(req, res) =>  {
-    try {
-      const { id_tahun_ajaran, nama, urutan, status } = req.body;
+/*
+Master Kategori Ref Semester:
+- 11 = Aktif
+- 12 = Inaktif
+*/
 
+export class SemesterController {
+  // Fungsi baru untuk mengenerate opsi tahun ajaran 5 tahun ke depan
+  static getTahunAjaranOptions = async (req, res, next) => {
+    try {
+      const currentYear = new Date().getFullYear();
+      const tahunAjaranOptions = [];
+
+      // Generate tahun ajaran untuk 5 tahun ke depan
+      for (let i = 0; i < 5; i++) {
+        const tahunMulai = currentYear + i;
+        const tahunSelesai = tahunMulai + 1;
+        const nama = `${tahunMulai}/${tahunSelesai}`;
+
+        // Cek apakah tahun ajaran sudah ada di database, jika belum buat
+        let tahunAjaran = await prisma.ref_tahun_ajaran.findFirst({
+          where: {
+            tahun_mulai: tahunMulai,
+            tahun_selesai: tahunSelesai,
+          },
+        });
+
+        if (!tahunAjaran) {
+          tahunAjaran = await prisma.ref_tahun_ajaran.create({
+            data: {
+              nama,
+              tahun_mulai: tahunMulai,
+              tahun_selesai: tahunSelesai,
+              id_master_kategori_status_ref_tahun_ajaran: 12, // Default inaktif
+            },
+          });
+        }
+
+        tahunAjaranOptions.push({
+          id: tahunAjaran.id,
+          nama: tahunAjaran.nama,
+          tahun_mulai: tahunAjaran.tahun_mulai,
+          tahun_selesai: tahunAjaran.tahun_selesai,
+        });
+      }
+
+      res.status(200).json(tahunAjaranOptions);
+    } catch (error) {
+      res.status(500).json({
+        message: 'Failed to fetch tahun ajaran options',
+        error: error.message,
+      });
+    }
+  };
+
+  static createSemester = async (req, res, next) => {
+    try {
+      // 1. Input validation
+      const { id_tahun_ajaran, urutan, status = 16 } = req.body;
+
+      if (!id_tahun_ajaran || !urutan) {
+        return res.status(400).json({
+          message: 'id_tahun_ajaran and urutan are required',
+        });
+      }
+
+      const parsedIdTahunAjaran = parseInt(id_tahun_ajaran);
+      const parsedUrutan = parseInt(urutan);
+      const parsedStatus = parseInt(status);
+
+      if (
+          isNaN(parsedIdTahunAjaran) ||
+          isNaN(parsedUrutan) ||
+          isNaN(parsedStatus)
+      ) {
+        return res.status(400).json({
+          message: 'id_tahun_ajaran, urutan, and status must be valid numbers',
+        });
+      }
+
+      if (![1, 2].includes(parsedUrutan)) {
+        return res.status(400).json({
+          message: 'Invalid urutan value. Must be 1 (Ganjil) or 2 (Genap)',
+        });
+      }
+
+      if (![15, 16].includes(parsedStatus)) {
+        return res.status(400).json({
+          message: 'Invalid status value. Must be 11 (Aktif) or 12 (Inaktif)',
+        });
+      }
+
+      // 2. Verify tahun ajaran exists
+      const tahunAjaran = await prisma.ref_tahun_ajaran.findFirst({
+        where: {
+          id: parsedIdTahunAjaran,
+        },
+      });
+
+      if (!tahunAjaran) {
+        return res.status(404).json({
+          message: 'Tahun ajaran not found',
+        });
+      }
+
+      // 3. Check for existing semester
+      const existingSemester = await prisma.ref_semester.findFirst({
+        where: {
+          id_tahun_ajaran: parsedIdTahunAjaran,
+          urutan: parsedUrutan,
+        },
+      });
+
+      if (existingSemester) {
+        return res.status(400).json({
+          message: 'Semester with the same tahun_ajaran and urutan already exists',
+        });
+      }
+
+      // 4. Check active semester if status is Aktif (11)
+      if (parsedStatus === 15) {
+        const activeSemester = await prisma.ref_semester.findFirst({
+          where: {
+            id_master_kategori_status_ref_semester: 15,
+          },
+        });
+
+        if (activeSemester) {
+          return res.status(400).json({
+            message: 'Another semester is already active. Only one semester can be active at a time.',
+          });
+        }
+      }
+
+      // 5. Construct semester name
+      const semesterType = parsedUrutan === 1 ? 'Ganjil' : 'Genap';
+      const nama = `${semesterType} ${tahunAjaran.nama}`;
+      if (nama.length > 50) {
+        return res.status(400).json({
+          message: 'Semester name exceeds 50 characters',
+        });
+      }
+
+      // 6. Create semester
       const semester = await prisma.ref_semester.create({
         data: {
-          id_tahun_ajaran,
+          id_tahun_ajaran: parsedIdTahunAjaran,
           nama,
-          urutan,
-          status
-        }
+          urutan: parsedUrutan,
+          id_master_kategori_status_ref_semester: parsedStatus,
+        },
       });
 
+      // 7. Success response
       res.status(201).json({
-        success: true,
-        data: semester
+        message: 'Semester created successfully',
+        data: semester,
       });
     } catch (error) {
       res.status(500).json({
-        success: false,
-        message: error.message
+        message: 'Failed to create semester',
+        error: error.message,
       });
     }
-  }
+  };
 
-  static getAllSemesters= async(req, res) =>  {
-    try {
-      const semesters = await prisma.ref_semester.findMany({});
-
-      res.status(200).json(semesters);
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
-    }
-  }
-
-  static getSemesterById = async(req, res) => {
+  static updateSemester = async (req, res, next) => {
     try {
       const { id } = req.params;
+      const { id_tahun_ajaran, urutan, status } = req.body;
+
+      // 1. Input validation
+      if (!id_tahun_ajaran || !urutan || !status) {
+        return res.status(400).json({
+          message: 'id_tahun_ajaran, urutan, and status are required',
+        });
+      }
+
+      const parsedIdTahunAjaran = parseInt(id_tahun_ajaran);
+      const parsedUrutan = parseInt(urutan);
+      const parsedStatus = parseInt(status);
+      const parsedId = parseInt(id);
+
+      if (
+          isNaN(parsedIdTahunAjaran) ||
+          isNaN(parsedUrutan) ||
+          isNaN(parsedStatus) ||
+          isNaN(parsedId)
+      ) {
+        return res.status(400).json({
+          message: 'id_tahun_ajaran, urutan, status, and id must be valid numbers',
+        });
+      }
+
+      if (![1, 2].includes(parsedUrutan)) {
+        return res.status(400).json({
+          message: 'Invalid urutan value. Must be 1 (Ganjil) or 2 (Genap)',
+        });
+      }
+
+      if (![11, 12].includes(parsedStatus)) {
+        return res.status(400).json({
+          message: 'Invalid status value. Must be 11 (Aktif) or 12 (Inaktif)',
+        });
+      }
+
+      // 2. Check if semester exists
+      const existingSemester = await prisma.ref_semester.findUnique({
+        where: { id: parsedId },
+      });
+
+      if (!existingSemester) {
+        return res.status(404).json({
+          message: 'Semester not found',
+        });
+      }
+
+      // 3. Verify tahun ajaran exists
+      const tahunAjaran = await prisma.ref_tahun_ajaran.findFirst({
+        where: {
+          id: parsedIdTahunAjaran,
+        },
+      });
+
+      if (!tahunAjaran) {
+        return res.status(404).json({
+          message: 'Tahun ajaran not found',
+        });
+      }
+
+      // 4. Check for duplicate semester
+      const duplicateSemester = await prisma.ref_semester.findFirst({
+        where: {
+          id_tahun_ajaran: parsedIdTahunAjaran,
+          urutan: parsedUrutan,
+          NOT: { id: parsedId },
+        },
+      });
+
+      if (duplicateSemester) {
+        return res.status(400).json({
+          message: 'Another semester with the same tahun_ajaran and urutan already exists',
+        });
+      }
+
+      // 5. Check active semester if status is Aktif (11)
+      if (parsedStatus === 11) {
+        const activeSemester = await prisma.ref_semester.findFirst({
+          where: {
+            id_master_kategori_status_ref_semester: 11,
+            NOT: { id: parsedId },
+          },
+        });
+
+        if (activeSemester) {
+          return res.status(400).json({
+            message: 'Another semester is already active. Only one semester can be active at a time.',
+          });
+        }
+      }
+
+      // 6. Construct semester name
+      const semesterType = parsedUrutan === 1 ? 'Ganjil' : 'Genap';
+      const nama = `${semesterType} ${tahunAjaran.nama}`;
+      if (nama.length > 50) {
+        return res.status(400).json({
+          message: 'Semester name exceeds 50 characters',
+        });
+      }
+
+      // 7. Update semester
+      const semester = await prisma.ref_semester.update({
+        where: { id: parsedId },
+        data: {
+          id_tahun_ajaran: parsedIdTahunAjaran,
+          nama,
+          urutan: parsedUrutan,
+          id_master_kategori_status_ref_semester: parsedStatus,
+        },
+      });
+
+      // 8. Success response
+      res.status(200).json({
+        message: 'Semester updated successfully',
+        data: semester,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: 'Failed to update semester',
+        error: error.message,
+      });
+    }
+  };
+
+  static getAllSemesters = async (req, res, next) => {
+    try {
+      const semesters = await prisma.ref_semester.findMany({
+        include: {
+          ref_tahun_ajaran: true,
+          ref_master_kategori_status_ref_semester: true,
+        },
+        orderBy: {
+          id: 'desc',
+        },
+      });
+
+      const flatSemesters = semesters.map((semester) => {
+        const { ref_tahun_ajaran, ref_master_kategori_status_ref_semester, ...rest } = semester;
+        return {
+          ...rest,
+          status: ref_master_kategori_status_ref_semester.nama,
+          tahun_ajaran: ref_tahun_ajaran.nama,
+          periode: semester.urutan === 1 ? 'Ganjil' : semester.urutan === 2 ? 'Genap' : 'Unknown',
+        };
+      });
+
+      res.status(200).json(flatSemesters);
+    } catch (error) {
+      res.status(500).json({
+        message: 'Failed to fetch semesters',
+        error: error.message,
+      });
+    }
+  };
+
+  static getSemesterById = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const parsedId = parseInt(id);
+
+      if (isNaN(parsedId)) {
+        return res.status(400).json({
+          message: 'Invalid semester ID',
+        });
+      }
 
       const semester = await prisma.ref_semester.findUnique({
-        where: { id: parseInt(id) },
+        where: { id: parsedId },
         include: {
-          ref_tahun_ajaran: true
-        }
+          ref_tahun_ajaran: true,
+          ref_master_kategori_status_ref_semester: true,
+        },
       });
 
       if (!semester) {
         return res.status(404).json({
-          success: false,
-          message: 'Semester not found'
+          message: 'Semester not found',
         });
       }
 
-      res.json({
-        success: true,
-        data: semester
+      const { ref_tahun_ajaran, ref_master_kategori_status_ref_semester, ...rest } = semester;
+      const flatSemester = {
+        ...rest,
+        status: ref_master_kategori_status_ref_semester.nama,
+        tahun_ajaran: ref_tahun_ajaran.nama,
+      };
+
+      res.status(200).json({
+        message: 'Semester retrieved successfully',
+        data: flatSemester,
       });
     } catch (error) {
       res.status(500).json({
-        success: false,
-        message: error.message
+        message: 'Failed to fetch semester',
+        error: error.message,
       });
     }
-  }
+  };
 
-  static getActiveSemester = async(req, res) => {
-    try{
-      const active_semester = await prisma.ref_semester.findFirst({
+  static getActiveSemester = async (req, res, next) => {
+    try {
+      const activeSemester = await prisma.ref_semester.findFirst({
         where: {
-          status: 'aktif'
-        }
-      })
-      res.status(200).json(active_semester);
-    } catch (e) {
-      res.status(500).json({
-        "message" : e.message
-      })
-    }
-  }
-
-  static setActiveSemester = async(req, res) => {
-    try{
-      const { id } = req.params;
-      await prisma.ref_semester.updateMany({
-        where: {
-          status: 'aktif'
+          id_master_kategori_status_ref_semester: 11,
         },
-        data: {
-          status: 'nonaktif'
-        }
-      })
-      const updatedSemester = await prisma.ref_semester.update({
-        where: {
-          id: parseInt(id)
+        include: {
+          ref_master_kategori_status_ref_semester: true,
+          ref_tahun_ajaran: true,
         },
-        data: {
-          status: 'aktif'
-        }
-      })
-      res.status(200).json(updatedSemester)
-    } catch (e) {
-      res.status(500).json({
-        "message" : e.message
-      })
-    }
-  }
+      });
 
-  static updateSemester = async(req, res) =>  {
+      if (!activeSemester) {
+        return res.status(404).json({
+          message: 'No active semester found',
+        });
+      }
+
+      const { ref_tahun_ajaran, ref_master_kategori_status_ref_semester, ...rest } = activeSemester;
+      const flatActiveSemester = {
+        ...rest,
+        status: ref_master_kategori_status_ref_semester.nama,
+        tahun_ajaran: ref_tahun_ajaran.nama,
+      };
+
+      res.status(200).json(flatActiveSemester);
+    } catch (error) {
+      res.status(500).json({
+        message: 'Failed to fetch active semester',
+        error: error.message,
+      });
+    }
+  };
+
+  static setActiveSemester = async (req, res, next) => {
     try {
       const { id } = req.params;
-      const { id_tahun_ajaran, nama, urutan, status } = req.body;
+      const parsedId = parseInt(id);
 
-      const semester = await prisma.ref_semester.update({
-        where: { id: parseInt(id) },
-        data: {
-          id_tahun_ajaran,
-          nama,
-          urutan,
-          status
-        }
+      if (isNaN(parsedId)) {
+        return res.status(400).json({
+          message: 'Invalid semester ID',
+        });
+      }
+
+      // Check if semester exists
+      const semester = await prisma.ref_semester.findUnique({
+        where: { id: parsedId },
       });
 
-      res.json({
-        success: true,
-        data: semester
+      if (!semester) {
+        return res.status(404).json({
+          message: 'Semester not found',
+        });
+      }
+
+      // Start transaction to ensure atomicity
+      const updatedSemester = await prisma.$transaction(async (tx) => {
+        // Deactivate all active semesters
+        await tx.ref_semester.updateMany({
+          where: {
+            id_master_kategori_status_ref_semester: 11,
+          },
+          data: {
+            id_master_kategori_status_ref_semester: 12,
+          },
+        });
+
+        // Activate the requested semester
+        return tx.ref_semester.update({
+          where: { id: parsedId },
+          data: {
+            id_master_kategori_status_ref_semester: 11,
+          },
+          include: {
+            ref_tahun_ajaran: true,
+            ref_master_kategori_status_ref_semester: true,
+          },
+        });
+      });
+
+      const { ref_tahun_ajaran, ref_master_kategori_status_ref_semester, ...rest } = updatedSemester;
+      const flatUpdatedSemester = {
+        ...rest,
+        status: ref_master_kategori_status_ref_semester.nama,
+        tahun_ajaran: ref_tahun_ajaran.nama,
+      };
+
+      res.status(200).json({
+        message: 'Semester set as active successfully',
+        data: flatUpdatedSemester,
       });
     } catch (error) {
       res.status(500).json({
-        success: false,
-        message: error.message
+        message: 'Failed to set active semester',
+        error: error.message,
       });
     }
-  }
+  };
 
-  static deleteSemester = async(req, res) =>  {
+  static deleteSemester = async (req, res, next) => {
     try {
       const { id } = req.params;
+      const parsedId = parseInt(id);
+
+      if (isNaN(parsedId)) {
+        return res.status(400).json({
+          message: 'Invalid semester ID',
+        });
+      }
+
+      const semester = await prisma.ref_semester.findUnique({
+        where: { id: parsedId },
+      });
+
+      if (!semester) {
+        return res.status(404).json({
+          message: 'Semester not found',
+        });
+      }
+
+      if (semester.id_master_kategori_status_ref_semester === 11) {
+        return res.status(400).json({
+          message: 'Cannot delete an active semester',
+        });
+      }
 
       await prisma.ref_semester.delete({
-        where: { id: parseInt(id) }
+        where: { id: parsedId },
       });
 
-      res.json({
-        success: true,
-        message: 'Semester deleted successfully'
+      res.status(200).json({
+        message: 'Semester deleted successfully',
       });
     } catch (error) {
       res.status(500).json({
-        success: false,
-        message: error.message
+        message: 'Failed to delete semester',
+        error: error.message,
       });
     }
-  }
+  };
 
-  static migrateSemester = async(req, res) =>  {
+  static migrateSemester = async (req, res) => {
     try {
-      const tahun_ajaran = await prisma.ref_tahun_ajaran.findMany();
+      const tahunAjaranList = await prisma.ref_tahun_ajaran.findMany();
 
-      for(const tahun of tahun_ajaran) {
-        const semester = await prisma.ref_semester.findFirst({
-          where: { id_tahun_ajaran: parseInt(tahun.id) },
-        });
-        if(!semester){
-          const semester = await prisma.ref_semester.create({
-            data: {
-              id_tahun_ajaran: tahun.id,
-              nama: 'Ganjil ' + tahun.nama,
-              urutan: 1,
-              status: 'aktif'
-            }
+      await prisma.$transaction(async (tx) => {
+        for (const tahun of tahunAjaranList) {
+          const semesterCount = await tx.ref_semester.count({
+            where: { id_tahun_ajaran: tahun.id },
           });
-          const semester2 = await prisma.ref_semester.create({
-            data: {
-              id_tahun_ajaran: tahun.id,
-              nama: 'Genap ' + tahun.nama,
-              urutan: 2,
-              status: 'aktif'
-            }
-          });
+
+          if (semesterCount === 0) {
+            await tx.ref_semester.create({
+              data: {
+                id_tahun_ajaran: tahun.id,
+                nama: `Ganjil ${tahun.nama}`,
+                urutan: 1,
+                id_master_kategori_status_ref_semester: 12,
+              },
+            });
+
+            await tx.ref_semester.create({
+              data: {
+                id_tahun_ajaran: tahun.id,
+                nama: `Genap ${tahun.nama}`,
+                urutan: 2,
+                id_master_kategori_status_ref_semester: 12,
+              },
+            });
+          }
         }
-      }
+      });
+
       res.status(200).json({
-        success: true,
-        message: 'Semester migrated successfully'
-      })
+        message: 'Semesters migrated successfully',
+      });
     } catch (error) {
-      console.log(error);
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+      res.status(500).json({
+        message: 'Failed to migrate semesters',
+        error: error.message,
+      });
     }
-  }
-
-  static getUserUsedSemester = async(req, res,next) => {
-    try{
-
-      // const currentToken = JWTService.extractTokenFromHeader(req);
-      // const decodedToken = JWTService.decodeToken(currentToken);
-      const payload = req.payload;
-      // console.log("payload", payload);
-
-      const activeSemesterUser = payload.semester;
-
-      const semesters = await prisma.ref_semester.findMany({orderBy: [
-        {
-          id_tahun_ajaran: 'desc'
-        },
-        {
-          urutan: 'asc'
-        }
-      ]});
-
-      // map semesters to new variable add colomn "use" if semester.id == activeSemesterUser
-      const mappedSemesters = semesters.map((semester) => {
-        return {
-          ...semester,
-          use: semester.id == activeSemesterUser ? true : false
-        }
-      })
-
-      res.status(200).json(mappedSemesters);
-
-
-
-    }catch (error) {
-      next(new AppError(error.message, 500)); 
-    }
-  }
+  };
 }

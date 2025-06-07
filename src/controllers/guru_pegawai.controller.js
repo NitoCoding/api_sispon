@@ -1,15 +1,38 @@
-import { AppError } from '../middleware/errorHandler.js';
 import { prisma } from '../prisma.js';
 import mysql from 'mysql2/promise';
 import {JWTService} from "../services/jwt.service.js";
 import {fileURLToPath} from "url";
 import {dirname, join} from "path";
 import { promises as fs } from 'fs';
+import {getTokenPayload} from "../helpers.js";
 
-export class PegawaiController {
-    static createGuruPegawai = async (req, res, next) => {
-        try {
-            const {
+// Create Guru Pegawai
+export const createGuruPegawai = async (req, res, next) => {
+    try {
+        const {
+            nip,
+            tahun_terdaftar,
+            nama_gp,
+            jk,
+            tempat_ttl,
+            tgl_ttl,
+            status_pernikahan,
+            jumlah_anak,
+            pendidikan,
+            jabatan,
+            ket_jabatan,
+            status_gp,
+            status_kp,
+            unit,
+            alamat,
+            telepon,
+        } = JSON.parse(req.body.data);
+
+        const foto_gp = req.file ? `/uploads/${req.baseUrl === '/santris' ? 'foto_santri' : 'foto_guru_pegawai'}/${req.file.filename}` : "";
+
+        // Buat guru pegawai baru
+        const newGuruPegawai = await prisma.guru_pegawai.create({
+            data: {
                 nip,
                 tahun_terdaftar,
                 nama_gp,
@@ -26,36 +49,103 @@ export class PegawaiController {
                 unit,
                 alamat,
                 telepon,
-            } = JSON.parse(req.body.data);
-    
-            const foto_gp = req.file ? `/uploads/${req.baseUrl === '/santris' ? 'foto_santri' : 'foto_guru_pegawai'}/${req.file.filename}` : null;
-    
-            // Buat guru pegawai baru
-            const newGuruPegawai = await prisma.guru_pegawai.create({
-                data: {
-                    nip,
-                    tahun_terdaftar,
-                    nama_gp,
-                    foto_gp,
-                    jk,
-                    tempat_ttl,
-                    tgl_ttl,
-                    status_pernikahan,
-                    jumlah_anak,
-                    pendidikan,
-                    jabatan,
-                    ket_jabatan,
-                    status_gp,
-                    status_kp,
-                    unit,
-                    alamat,
-                    telepon,
-                },
-            });
-    
-            res.status(201).json({ message: 'Guru Pegawai created successfully', guru_pegawai: newGuruPegawai });
-        } catch (error) {
-            next(error);
+            },
+        });
+
+        res.status(201).json({ message: 'Guru Pegawai created successfully', guru_pegawai: newGuruPegawai });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Get All Guru Pegawai
+export const getAllGuruPegawai = async (req, res, next) => {
+    try {
+        const guruPegawai = await prisma.guru_pegawai.findMany({
+            orderBy: {
+                nama_gp: 'asc', // Sort by nama_gp in ascending order
+            },
+        });
+
+        if (guruPegawai.length === 0) {
+            return res.status(200).json({ message: "No guru_pegawai found", data: [] });
+        }
+
+        res.status(200).json(guruPegawai);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getIsWaliGuruPegawai = async (req, res, next) => {
+    try {
+
+        const { decoded, semester, tahunAjaran } = await getTokenPayload(req);
+
+        const guruPegawai = await prisma.guru_pegawai.findMany({
+            select: {
+                id: true,
+                nama_gp: true,
+            },
+        });
+
+        // Fetch all data_rombel records to get wali_kelas IDs in one query
+        const rombelWali = await prisma.data_rombel.findMany({
+            select: {
+                id_wali_kelas: true,
+            },
+            where: {
+                id_tahun_ajaran: semester.id_tahun_ajaran,
+            }
+        });
+
+        // Create a Set of id_wali_kelas for efficient lookup
+        const waliKelasIds = new Set(rombelWali.map((rombel) => rombel.id_wali_kelas));
+
+        // Map guru_pegawai to the desired response format
+        const waliList = guruPegawai
+            .map((guru) => ({
+                id: guru.id,
+                nama_gp: guru.nama_gp,
+                isWali: waliKelasIds.has(guru.id),
+            }))
+            .sort((a, b) => a.nama_gp.localeCompare(b.nama_gp));
+
+        // Return the response
+        return res.status(200).json(waliList);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getAllGuruPegawaiLogin = async (req, res, next) => {
+    try {
+        const guruPegawai = await prisma.guru_pegawai.findMany({
+            select: {
+                id: true,
+                nama_gp: true
+            },
+            orderBy: {
+                nama_gp: 'asc', // Sort by nama_gp in ascending order
+            },
+        });
+
+        res.status(200).json(guruPegawai);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getGuruPegawaiById = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const guruPegawai = await prisma.guru_pegawai.findUnique({
+            where: { id: parseInt(id) },
+        });
+
+        if (!guruPegawai) {
+            return res.status(404).json({ message: 'Guru Pegawai not found' });
         }
     }
 

@@ -8,6 +8,7 @@ import {
 	writeExcelFilewithSubheader2,
 } from "../services/export.service.js";
 
+// const prisma = new PrismaClient();
 
 export class NilaiKarakterController {
 	static getAllNilaiKarakter = async (req, res, next) => {
@@ -24,9 +25,6 @@ export class NilaiKarakterController {
 						kelas: className,
 					},
 				});
-				if (!ruanganKelas) {
-					throw new AppError(`Class ${className} not found`, 404);
-				}
 				rombelWhereClause["id_kelas"] = parseInt(ruanganKelas.id);
 			}
 
@@ -101,9 +99,14 @@ export class NilaiKarakterController {
 						// 	kelompokKarakter.ref_kriteria_karakter.map((k) => ({
 						// 		id: k.id,
 						// 	}));
+						// karakterWhereClause.id_kriteria = {
+						// 	in: kriteriaList.map((k) => k.id),
+						// };
 						karakterWhereClause.id_kriteria = {
 							in: kelompokKarakter.ref_kriteria_karakter.map(
-								(k) => k.id
+								(k) => ({
+									id: k.id,
+								})
 							),
 						};
 					} else {
@@ -319,10 +322,6 @@ export class NilaiKarakterController {
 					kelas: className,
 				},
 			});
-
-			if (!ruanganKelas) {
-				throw new AppError(`Class ${className} not found`, 404);
-			}
 			rombelWhereClause["id_kelas"] = parseInt(ruanganKelas.id);
 
 			const rombel = await prisma.data_rombel.findFirst({
@@ -591,9 +590,6 @@ export class NilaiKarakterController {
 					kelas: className,
 				},
 			});
-			if (!ruanganKelas) {
-				throw new AppError(`Class ${className} not found`, 404);
-			}
 			rombelWhereClause["id_kelas"] = parseInt(ruanganKelas.id);
 
 			const rombel = await prisma.data_rombel.findFirst({
@@ -889,7 +885,7 @@ export class NilaiKarakterController {
 
 			const updatedNilai = await prisma.data_nilai_karakter.update({
 				where: {
-					id: existingNilai.id,
+					id: parseInt(id),
 				},
 				data: {
 					nilai: parseFloat(nilai),
@@ -991,7 +987,7 @@ export class NilaiKarakterController {
 							// console.log("nilai[key]", nilai[key]);
 							// console.log("karakterMap[key]", karakterMap[key]);
 
-                            if (nilai[key] === "" || nilai[key] == null) continue;
+							if (nilai[key] === "") continue;
 							// console.log("data", {
 							// 	bulan: parseInt(month),
 							// 			minggu: parseInt(week),
@@ -1005,19 +1001,16 @@ export class NilaiKarakterController {
 							const existingNilai =
 								await tx.data_nilai_karakter.findUnique({
 									where: {
-										id_santri_id_tahun_ajaran_id_semester_id_kriteria_id_basis_lokasi_bulan_minggu:
-											{
-												id_santri: santri.id,
-												id_tahun_ajaran: tahunAjaran.id,
-												id_semester: semester.id,
-												id_kriteria:
-													karakterMap[key].id,
-												id_basis_lokasi:
-													karakterMap[key]
-														.basis_lokasi,
-												bulan: parseInt(month),
-												minggu: parseInt(week),
-											},
+										id_santri_id_tahun_ajaran_id_semester_id_kriteria_id_basis_lokasi_bulan_minggu: {
+											id_santri: santri.id,
+											id_tahun_ajaran: tahunAjaran.id,
+											id_semester: semester.id,
+											id_kriteria: karakterMap[key].id,
+											id_basis_lokasi:
+												karakterMap[key].basis_lokasi,
+											bulan: parseInt(month),
+											minggu: parseInt(week),
+										}
 									},
 								});
 							if (existingNilai) {
@@ -1072,7 +1065,7 @@ export class NilaiKarakterController {
 			// console.log(data);
 			// console.log(filePath);
 			res.status(200).json({
-				success: errorData.length === 0,
+				success: true ? errorData.length === 0 : false,
 				message: errorData.length
 					? "Beberapa data gagal diupload"
 					: "Data berhasil diupload",

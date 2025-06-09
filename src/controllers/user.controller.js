@@ -8,8 +8,8 @@ export const createUser = async (req, res, next) => {
   try {
     const { kode_pegawai, password, role_id} = req.body;
 
-      // Encrypt password sebelum disimpan
-      const encryptedPassword = encrypt(password);
+    // Encrypt password sebelum disimpan
+    const encryptedPassword = encrypt(password);
 
     // Buat user baru
     const newUser = await prisma.users.create({
@@ -60,12 +60,12 @@ export const getUserById = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({ message: 'Pengguna tidak ditemukan' });
     }
-  };
 
-  // Get User by ID
-  static getUserById = async (req, res, next) => {
-    try {
-      const { id } = req.params;
+    res.status(200).json(user);
+  } catch (error) {
+    next(error);
+  }
+};
 
 // Update User
 export const updateUser = async (req, res, next) => {
@@ -73,20 +73,17 @@ export const updateUser = async (req, res, next) => {
     const { id } = req.params;
     const { kode_pegawai, password, role_id } = req.body;
 
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
+    // Cek apakah user ada
+    const existingUser = await prisma.users.findUnique({
+      where: { id: parseInt(id) },
+    });
 
     if (!existingUser) {
       return res.status(404).json({ message: 'Pengguna tidak ditemukan' });
     }
-  };
 
-  // Update User
-  static updateUser = async (req, res, next) => {
-    try {
-      const { id } = req.params;
-      const { kode_pegawai, password, role } = req.body;
+    // Encrypt password jika ada
+    const encryptedPassword = password ? encrypt(password) : existingUser.password;
 
     // Update user
     const updatedUser = await prisma.users.update({
@@ -104,10 +101,10 @@ export const updateUser = async (req, res, next) => {
   }
 };
 
-      // Encrypt password jika ada
-      const encryptedPassword = password
-        ? encrypt(password)
-        : existingUser.password;
+// Delete User
+export const deleteUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
 
     // Cek apakah user ada
     const existingUser = await prisma.users.findUnique({
@@ -209,7 +206,7 @@ export const fillRole = async (req, res, next) => {
   }
 }
 
-static migrateUsers = async (req, res, next) => {
+export const migrateUsers = async (req, res, next) => {
   try {
     // Konfigurasi koneksi ke database lama
     const connection = await mysql.createConnection({
@@ -235,105 +232,15 @@ static migrateUsers = async (req, res, next) => {
       // Buat user baru di tabel baru
       await prisma.users.create({
         data: {
-          kode_pegawai,
-          password: encryptedPassword, // Simpan password yang sudah dienkripsi
-          role,
+          kode_pegawai: parseInt(kd_gp), // Konversi kd_gp ke number
+          password: hashedPassword, // Simpan password yang sudah di-hash
+          role: ket
         },
       });
-
-      res
-        .status(200)
-        .json({ message: "User updated successfully", user: updatedUser });
-      } 
-    }catch (error) {
-      next(error);
     }
-}
 
-  // Delete User
-  static deleteUser = async (req, res, next) => {
-    try {
-      const { id } = req.params;
-
-      // Cek apakah user ada
-      const existingUser = await prisma.users.findUnique({
-        where: { id: parseInt(id) },
-      });
-
-      if (!existingUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // Hapus user
-      await prisma.users.delete({
-        where: { id: parseInt(id) },
-      });
-
-      res.status(200).json({ message: "User deleted successfully" });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  static migrateUsers = async (req, res, next) => {
-    try {
-      // Konfigurasi koneksi ke database lama
-      const connection = await mysql.createConnection({
-        host: process.env.OLD_DB_HOST, // Host database lama
-        user: process.env.OLD_DB_USER, // User database lama
-        password: process.env.OLD_DB_PASSWORD, // Password database lama
-        database: process.env.OLD_DB_NAME, // Nama database lama
-      });
-
-      // Ambil semua data dari tabel lama
-      const [rows] = await connection.execute("SELECT * FROM tb_user");
-
-      // Tutup koneksi ke database lama
-      await connection.end();
-
-      // Loop melalui setiap baris data dan masukkan ke tabel baru
-      for (const row of rows) {
-        const { kd_gp, pas2, ket } = row;
-
-        // Hash password dari kolom `pas2`
-        const hashedPassword = encrypt(pas2);
-
-        // Buat user baru di tabel baru
-        await prisma.users.create({
-          data: {
-            kode_pegawai: parseInt(kd_gp), // Konversi kd_gp ke number
-            password: hashedPassword, // Simpan password yang sudah di-hash
-            role: ket,
-          },
-        });
-      }
-
-      res.status(200).json({ message: "Data migrated successfully" });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  static getRoleByKodePegawai = async (req, res, next) => {
-    try {
-        const { kode_pegawai } = req.params;
-        const role = await prisma.users.findMany({
-            where: { kode_pegawai: kode_pegawai },
-        });
-
-        const formattedOutput = role.map((item) => {
-            return {
-                kode_pegawai: item.kode_pegawai,
-                role: item.role,
-            };
-        });
-        return res.status(200).json({
-            success: true,
-            message: "Get role by nip successfully",
-            data: formattedOutput,
-        });
-    } catch (error) {
-        next(new AppError(error.message, 500));
-    }
-}
-}
+    res.status(200).json({ message: 'Data migrated successfully' });
+  } catch (error) {
+    next(error);
+  }
+};

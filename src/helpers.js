@@ -78,8 +78,14 @@ export const trimmedString = (str) => {
 	return str.trim();
 };
 
-export const getTokenPayload = async (req) => {
-	const token = req.headers.authorization?.split(" ")[1];
+export const printPdf = async (res, data, templatePath, orientation = 'Portrait', filename = 'document.pdf') => {
+    try {
+        // Render EJS template with provided data
+        const html = await ejs.renderFile(templatePath, { data });
+
+        // Set response headers for PDF
+        res.header('Content-Type', 'application/pdf');
+        res.header('Content-Disposition', `attachment; filename=${filename}`);
 
         // Configure wkhtmltopdf options
         const pdfOptions = {
@@ -94,27 +100,12 @@ export const getTokenPayload = async (req) => {
             // headerHtml: orientation === "Portrait"? path.join(__dirname, '../public/pdf_template/watermark-p.html') : path.join(__dirname, '../public/pdf_template/watermark-l.html'),
         };
 
-	const semester = await prisma.ref_semester.findUnique({
-		where: { id: semesterId },
-	});
-
-	if (!semester) {
-		throw new AppError("Invalid token: Missing semester", 400);
-	}
-
-	// Ambil tahun ajaran aktif
-	const tahunAjaran = await prisma.ref_tahun_ajaran.findFirst({
-		where: { id: semester.id_tahun_ajaran },
-	});
-	if (!tahunAjaran) {
-		return res.status(404).json({ message: "Academic year not found" });
-	}
-
-	const user = await prisma.users.findFirst({
-		where: { id: parseInt(decoded.userId) },
-	});
-
-	return { decoded, semester, tahunAjaran, user };
+        // Generate and stream PDF
+        wkhtmltopdf(html, pdfOptions).pipe(res);
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        res.status(500).send(`Error generating PDF: ${error.message}`);
+    }
 };
 
 export const getTokenPayload = async (req) => {

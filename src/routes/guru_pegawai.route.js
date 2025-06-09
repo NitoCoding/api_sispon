@@ -17,14 +17,10 @@ router.get('/details', authenticate, getGuruPegawaiDetails);
 router.put('/details', authenticate, upload.single("foto"), updateGuruPegawaiDetails);
 router.get('/iswali', authenticate, getIsWaliGuruPegawai);
 
-router.get('/sync',PegawaiController.migrateGuruPegawai);
-router.get('/details', authenticate, checkPermission('PEGAWAI-VIEW') ,PegawaiController.getGuruPegawaiDetails);
-router.put('/details', authenticate, checkPermission('PEGAWAI-UPDATE'),upload.single("foto"), PegawaiController.updateGuruPegawaiDetails);
-
-router.post('/', authenticate, checkPermission('PEGAWAI-CREATE') ,upload.single("foto"), PegawaiController.createGuruPegawai);
-router.get('/', authenticate, checkPermission('PEGAWAI-VIEW'),PegawaiController.getAllGuruPegawai);
-router.get('/:id', authenticate, checkPermission('PEGAWAI-VIEW'),PegawaiController.getGuruPegawaiById);
-router.put('/:id', authenticate,checkPermission('PEGAWAI-UPDATE'), upload.single("foto"), PegawaiController.updateGuruPegawai);
-router.delete('/:id', authenticate, checkPermission('PEGAWAI-DELETE') ,PegawaiController.deleteGuruPegawai);
+router.post('/', authenticate, upload.single("foto"), createGuruPegawai);
+router.get('/', authenticate, getAllGuruPegawai);
+router.get('/:id', authenticate, getGuruPegawaiById);
+router.put('/:id', authenticate, upload.single("foto"), updateGuruPegawai);
+router.delete('/:id', authenticate, deleteGuruPegawai);
 
 export default router;

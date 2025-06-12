@@ -192,6 +192,7 @@ export class MasterKarakterController {
 				nama: item.nama,
 				deskripsi: item.deskripsi,
 				basis: item.ref_master_kategori.nama,
+				is_aktif: item.is_aktif,
 			}));
 
 			if (group === "true") {

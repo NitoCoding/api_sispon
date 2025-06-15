@@ -394,12 +394,6 @@ export class MasterKarakterController {
 
 			const normalizedType = tipe.toUpperCase();
 
-			console.log("Normalized Type:", normalizedType);
-			// console.log("Available Types:", Object.values(TYPES));
-			// console.log("Available Keys:", Object.keys(TYPES));
-			// console.log(Object.keys(TYPES).includes(normalizedType));
-			// console.log("TYPES:", TYPES[normalizedType]);
-			// return next(new AppError("Tipe harus diisi", 400));
 
 			if(!Object.keys(TYPES).includes(normalizedType)) {
 				return next(
@@ -451,4 +445,143 @@ export class MasterKarakterController {
 			next(new AppError(error.message, 500));
 		}
 	};
+
+	static getKategoriKarakterdanKriteria = async (req, res, next) => {
+		try {
+			const { tipe } = req.query;
+			const normalizedType = tipe ? tipe.toUpperCase() : null;
+			if (normalizedType && !Object.keys(TYPES).includes(normalizedType)) {
+				return next(
+					new AppError(
+						`Tipe harus salah satu dari: ${Object.keys(TYPES).join(", ")}`,
+						400
+					)
+				);
+			}
+			const kategoriKarakter = await prisma.ref_karakter_kategori.findMany({});
+			const kategoriWithKriteria = await Promise.all(
+				kategoriKarakter.map(async (kategori) => {
+					const kriteria = await prisma.ref_kriteria_karakter.findMany({
+						where: {
+							id_kategori: kategori.id,
+							...(normalizedType ? { id_basis_lokasi: TYPES[normalizedType] } : {}),
+						},
+					});
+					return {
+						...kategori,
+						kriteria: kriteria,
+					};
+				}))
+
+
+			return res.status(200).json({
+				success: true,
+				message: "Kategori karakter dan kriteria berhasil diambil",
+				data: kategoriWithKriteria,
+			});
+		} catch (error) {
+			next(new AppError(error.message, 500));
+		}
+	}
+
+	static getKategoriKarakterdanKriteriaById = async (req, res, next) => {
+		try {
+			const { id } = req.params;
+
+			const kategori_karakter = await prisma.ref_karakter_kategori.findFirst({
+				where: { id: parseInt(id) },
+				include: {
+					ref_kriteria_karakter: true,
+				},
+			});
+
+			if (!kategori_karakter) {
+				return next(new AppError("Kategori not found", 404));
+			}
+
+			return res.status(200).json({
+				success: true,
+				message: "Kategori karakter dan kriteria berhasil diambil",
+				data: kategori_karakter,
+			});
+		} catch (error) {
+			next(new AppError(error.message, 500));
+		}
+	}
+
+	static updateKategoriKarakterdanKriteria = async (req, res, next) => {
+		try {
+			const { id } = req.params;
+			const { nama, kriteria, tipe } = req.body;
+
+			if(!nama || !kriteria || !Array.isArray(kriteria) || kriteria.length === 0) {
+				return next(new AppError("Nama kategori dan kriteria harus diisi", 400));	
+			}
+
+			const normalizedType = tipe.toUpperCase();
+
+			if(!Object.keys(TYPES).includes(normalizedType)) {
+				return next(
+					new AppError(
+						`Tipe harus salah satu dari: ${Object.keys(TYPES).join(", ")}`,
+						400
+					)
+				);
+			}
+
+			const kategori_karakter = await prisma.$transaction(async (tx) => {
+				// Check if the kategori exists
+				const existingKategori = await tx.ref_karakter_kategori.findFirst({
+					where: { id: parseInt(id) },
+				});
+
+				if (!existingKategori) {
+					throw new AppError("Kategori not found", 404);
+				}
+
+				// Update the kategori
+				await tx.ref_karakter_kategori.update({
+					where: { id: parseInt(id) },
+					data: { nama: nama.trim() },
+				});
+
+				const kriteriaPromises = kriteria.map(async (k) => {
+					if (k.id) {
+						return tx.ref_kriteria_karakter.update({
+							where: { id: parseInt(k.id) },
+							data: {
+								nama: k.nama.trim(),
+								deskripsi: k.deskripsi ? k.deskripsi.trim() : null,
+								id_kategori: parseInt(id),
+								id_basis_lokasi: TYPES[normalizedType],
+								is_aktif: k.is_aktif !== undefined ? k.is_aktif : true,
+							},
+						});
+					} else {
+						return tx.ref_kriteria_karakter.create({
+							data: {
+								nama: k.nama.trim(),
+								deskripsi: k.deskripsi ? k.deskripsi.trim() : null,
+								id_kategori: parseInt(id),
+								id_basis_lokasi: TYPES[normalizedType],
+								is_aktif: k.is_aktif !== undefined ? k.is_aktif : true,
+							},
+						});
+					}
+				});
+
+				await Promise.all(kriteriaPromises);
+
+				return existingKategori;
+			});
+
+			return res.status(200).json({
+				success: true,
+				message: "Kategori karakter dan kriteria berhasil diupdate",
+				data: kategori_karakter,
+			});
+		} catch (error) {
+			next(new AppError(error.message, 500));
+		}
+	}
 }

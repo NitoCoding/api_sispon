@@ -1,36 +1,49 @@
-import { PrismaClient } from "@prisma/client";
 import { getTokenPayload } from "../helpers.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { prisma } from "../prisma.js";
 import {
 	extractExcelData,
-	writeExcelFilewithSubheader,
 	writeExcelFilewithSubheader2,
 } from "../services/export.service.js";
 
 // const prisma = new PrismaClient();
 
+const GENDER = {
+	Putra : "L",
+	Putri: "P",
+};
+
+const JENJANG = {
+	SMP : 1,
+	SMA: 2,
+}
+
 export class NilaiKarakterController {
 	static getAllNilaiKarakter = async (req, res, next) => {
 		try {
-			const {
-				groupbyclass,
-				class: className,
-				type,
-				cat,
-				bulan,
-			} = req.query;
-			const { decoded, semester, tahunAjaran } = await getTokenPayload(
-				req
-			);
+			const { groupbyclass, class: className, type, cat, bulan } = req.query;
+			const {  semester, tahunAjaran } = await getTokenPayload(req);
+			// console.log(className)
 
 			const rombelWhereClause = { id_tahun_ajaran: tahunAjaran.id };
 			if (className) {
+				// className format className-gender
+				
+				const classname = className.split("-")[0];
+				const gender = className.split("-")[1];
+
+				// const {classname, gender} = [parts[0] || "all" , parts[1] ];
+				
+				
 				const ruanganKelas = await prisma.ref_kelas.findFirst({
 					where: {
-						kelas: className,
+						kelas: classname,
+						gender: gender,
 					},
 				});
+				if (!ruanganKelas) {
+					return next(new AppError("Kelas tidak ditemukan", 404));
+				}
 				rombelWhereClause["id_kelas"] = parseInt(ruanganKelas.id);
 			}
 
@@ -46,7 +59,7 @@ export class NilaiKarakterController {
 				},
 			});
 
-			let santriDatas = [];
+			const santriDatas = [];
 
 			for (const rombel of rombels) {
 				const santriIds = rombel.data_rombel_anggota.map(
@@ -88,8 +101,8 @@ export class NilaiKarakterController {
 				}
 
 				if (cat && cat !== "all") {
-					const kelompokKarakter =
-						await prisma.ref_karakter_kategori.findFirst({
+					const kelompokKarakter = await prisma.ref_karakter_kategori.findFirst(
+						{
 							where: {
 								nama: cat,
 							},
@@ -100,11 +113,9 @@ export class NilaiKarakterController {
 									},
 								},
 							},
-						});
-					if (
-						kelompokKarakter &&
-						kelompokKarakter.ref_kriteria_karakter
-					) {
+						}
+					);
+					if (kelompokKarakter && kelompokKarakter.ref_kriteria_karakter) {
 						// const kriteriaList =
 						// 	kelompokKarakter.ref_kriteria_karakter.map((k) => ({
 						// 		id: k.id,
@@ -113,26 +124,23 @@ export class NilaiKarakterController {
 						// 	in: kriteriaList.map((k) => k.id),
 						// };
 						karakterWhereClause.id_kriteria = {
-							in: kelompokKarakter.ref_kriteria_karakter.map(
-								(k) => k.id
-							),
+							in: kelompokKarakter.ref_kriteria_karakter.map((k) => k.id),
 						};
 					} else {
 						karakterWhereClause.id_kriteria = { in: [] };
 					}
 				}
 
-				const nilaiKatakterList =
-					await prisma.data_nilai_karakter.findMany({
-						where: karakterWhereClause,
-						include: {
-							ref_kriteria_karakter: {
-								include: {
-									ref_karakter_kategori: true,
-								},
+				const nilaiKatakterList = await prisma.data_nilai_karakter.findMany({
+					where: karakterWhereClause,
+					include: {
+						ref_kriteria_karakter: {
+							include: {
+								ref_karakter_kategori: true,
 							},
 						},
-					});
+					},
+				});
 
 				const nilaiMap = nilaiKatakterList.reduce((acc, item) => {
 					if (!acc[item.id_santri]) {
@@ -154,15 +162,11 @@ export class NilaiKarakterController {
 					const nilaiData = {
 						id: item.id,
 						karakter: item.ref_kriteria_karakter.nama,
-						kategori:
-							item.ref_kriteria_karakter.ref_karakter_kategori
-								.nama,
+						kategori: item.ref_kriteria_karakter.ref_karakter_kategori.nama,
 						nilai: item.nilai,
 					};
 
-					acc[item.id_santri].minggu[item.minggu].nilai_list.push(
-						nilaiData
-					);
+					acc[item.id_santri].minggu[item.minggu].nilai_list.push(nilaiData);
 
 					const mingguData = acc[item.id_santri].minggu[item.minggu];
 					mingguData.total_nilai = mingguData.nilai_list.reduce(
@@ -189,15 +193,12 @@ export class NilaiKarakterController {
 							nilaiMap[anggota.id_santri]?.minggu || {}
 						).reduce((sum, minggu) => sum + minggu.total_nilai, 0),
 						rata_rata:
-							Object.values(
-								nilaiMap[anggota.id_santri]?.minggu || {}
-							).reduce(
+							Object.values(nilaiMap[anggota.id_santri]?.minggu || {}).reduce(
 								(sum, minggu) => sum + minggu.rata_rata,
 								0
 							) /
-							(Object.keys(
-								nilaiMap[anggota.id_santri]?.minggu || {}
-							).length || 1),
+							(Object.keys(nilaiMap[anggota.id_santri]?.minggu || {}).length ||
+								1),
 					}));
 
 				santriDatas.push({
@@ -208,9 +209,7 @@ export class NilaiKarakterController {
 			}
 			if (groupbyclass === "true") {
 				const sortedData = santriDatas.map((rombel) => {
-					rombel.students.sort((a, b) =>
-						a.nama.localeCompare(b.nama)
-					);
+					rombel.students.sort((a, b) => a.nama.localeCompare(b.nama));
 					return rombel;
 				});
 				return res.status(200).json(sortedData);
@@ -229,15 +228,22 @@ export class NilaiKarakterController {
 
 	static getRangkingNilaiKarakter = async (req, res, next) => {
 		try {
-			const { decoded, semester, tahunAjaran } = await getTokenPayload(
-				req
-			);
+			const { jenjang, gender } = req.query;
+			const {  semester, tahunAjaran } = await getTokenPayload(req);
+
+			const normalizedJenjang = jenjang ? jenjang.toUpperCase() : null;
+			const normalizedGender = gender ? gender.toUpperCase() : null;
 			const karakterWhereClause = {
 				// id_santri: {
 				// 	in: santriIds,
 				// },
 				id_semester: semester.id,
 				id_tahun_ajaran: tahunAjaran.id,
+				santri: {
+					id_jenjang : normalizedJenjang ? JENJANG[normalizedJenjang] : undefined,
+					jk : normalizedGender ? GENDER[normalizedGender] : undefined,
+				}
+				
 			};
 			const nilaiKatakterList = await prisma.data_nilai_karakter.groupBy({
 				by: ["id_santri"],
@@ -269,19 +275,16 @@ export class NilaiKarakterController {
 				return acc;
 			}, {});
 
-			const nilaiRankMap = nilaiKatakterList.reduce(
-				(acc, item, index) => {
-					const santri = santriMap[item.id_santri] || {};
-					acc[index + 1] = {
-						id: santri.id,
-						nis: santri.nis,
-						nama: santri.nama,
-						total_nilai: item._sum.nilai,
-					};
-					return acc;
-				},
-				{}
-			);
+			const nilaiRankMap = nilaiKatakterList.reduce((acc, item, index) => {
+				const santri = santriMap[item.id_santri] || {};
+				acc[index + 1] = {
+					id: santri.id,
+					nis: santri.nis,
+					nama: santri.nama,
+					total_nilai: item._sum.nilai,
+				};
+				return acc;
+			}, {});
 			// const rangkingMap = nilaiKatakterList.reduce((acc, item) => {
 			// console.log(nilaiKatakterList);
 			return res.status(200).json({
@@ -297,14 +300,10 @@ export class NilaiKarakterController {
 	static getModalData = async (req, res, next) => {
 		try {
 			const { class: className, type, cat, pekan, bulan } = req.query;
-			const { decoded, semester, tahunAjaran } = await getTokenPayload(
-				req
-			);
+			const {  semester, tahunAjaran } = await getTokenPayload(req);
 
 			if (!className) {
-				return next(
-					new AppError("query class tidak boleh kosong", 400)
-				);
+				return next(new AppError("query class tidak boleh kosong", 400));
 			}
 
 			const rombelWhereClause = { id_tahun_ajaran: tahunAjaran.id };
@@ -355,24 +354,20 @@ export class NilaiKarakterController {
 			}
 
 			if (cat && cat !== "all") {
-				const kelompokKarakter =
-					await prisma.ref_karakter_kategori.findFirst({
-						where: {
-							nama: cat,
-						},
-						include: {
-							ref_kriteria_karakter: {
-								where: {
-									is_aktif: true,
-								},
+				const kelompokKarakter = await prisma.ref_karakter_kategori.findFirst({
+					where: {
+						nama: cat,
+					},
+					include: {
+						ref_kriteria_karakter: {
+							where: {
+								is_aktif: true,
 							},
 						},
-					});
+					},
+				});
 				// console.log(kelompokKarakter);
-				if (
-					kelompokKarakter &&
-					kelompokKarakter.ref_kriteria_karakter
-				) {
+				if (kelompokKarakter && kelompokKarakter.ref_kriteria_karakter) {
 					// const kriteriaList =
 					// 	kelompokKarakter.ref_kriteria_karakter.map((k) => ({
 					// 		id: k.id,
@@ -382,9 +377,7 @@ export class NilaiKarakterController {
 					// };
 					// console.log(kelompokKarakter.ref_kriteria_karakter.map((k) => (k.id)))
 					karakterWhereClause.id = {
-						in: kelompokKarakter.ref_kriteria_karakter.map(
-							(k) => k.id
-						),
+						in: kelompokKarakter.ref_kriteria_karakter.map((k) => k.id),
 					};
 				} else {
 					karakterWhereClause.id = { in: [] };
@@ -392,14 +385,13 @@ export class NilaiKarakterController {
 
 				// karakterWhereClause.is_aktif = true;
 			}
-			const kriteria_karakter =
-				await prisma.ref_kriteria_karakter.findMany({
-					where: karakterWhereClause,
-					include: {
-						ref_karakter_kategori: true,
-						ref_master_kategori: true,
-					},
-				});
+			const kriteria_karakter = await prisma.ref_kriteria_karakter.findMany({
+				where: karakterWhereClause,
+				include: {
+					ref_karakter_kategori: true,
+					ref_master_kategori: true,
+				},
+			});
 
 			const header = kriteria_karakter.map((item) => ({
 				id: item.id,
@@ -409,19 +401,6 @@ export class NilaiKarakterController {
 				basis: item.ref_master_kategori.nama,
 			}));
 
-			const groupHeader = header.reduce((acc, item) => {
-				if (!acc[item.kategori]) {
-					acc[item.kategori] = {
-						items: [],
-						length: 0,
-					};
-				}
-				acc[item.kategori].items.push(item);
-				acc[item.kategori].length = acc[item.kategori].items.length;
-				return acc;
-			}, {});
-
-			// console.log(groupHeader);
 
 			karakterWhereClause.id_santri = {
 				in: santriIds,
@@ -432,9 +411,7 @@ export class NilaiKarakterController {
 			karakterWhereClause.id_semester = semester.id;
 			karakterWhereClause.id_tahun_ajaran = tahunAjaran.id;
 			if (!pekan) {
-				return next(
-					new AppError("query pekan tidak boleh kosong", 400)
-				);
+				return next(new AppError("query pekan tidak boleh kosong", 400));
 			}
 			// if (pekan && pekan !== "all") {
 			karakterWhereClause.minggu = parseInt(pekan);
@@ -471,42 +448,16 @@ export class NilaiKarakterController {
 				minggu: item.minggu,
 			}));
 
-			// console.log("niliaMap",nilaiMap);
-			// gabung santriList dengan nilaiMap
-			// const santriMap = santriList.reduce((acc, santri) => {
-			// 	acc[santri.id] = santri;
-			// 	return acc;
-			// }, {});
-			// console.log(santriList);
-			const santriListWithNilai = santriList.map((santri) => {
-				const nilaiSantri = nilaiMap.filter(
-					(n) => n.id_santri === santri.id
-				);
-				return {
-					...santri,
-					nilai: nilaiSantri,
-				};
-			});
-			// console.log(santriListWithNilai);
-
-			const datas = {
-				header: groupHeader,
-				nilai: santriListWithNilai,
-			};
-
-			// const rowData = []
 
 			const rowData = santriList.map((santri) => {
-				let dataSantri = {
+				const dataSantri = {
 					id: santri.id,
 					nis: santri.nis,
 					nama: santri.nama,
 				};
 				header.forEach((item) => {
 					const nilai = nilaiMap.find(
-						(n) =>
-							n.id_santri === santri.id &&
-							n.karakter_id === item.id
+						(n) => n.id_santri === santri.id && n.karakter_id === item.id
 					);
 					const karakter_nilai = nilai ? nilai.nilai : "";
 					dataSantri[item.nama] = karakter_nilai;
@@ -567,14 +518,10 @@ export class NilaiKarakterController {
 	static getRombelDetail = async (req, res, next) => {
 		try {
 			const { class: className, type, cat, pekan, bulan } = req.query;
-			const { decoded, semester, tahunAjaran } = await getTokenPayload(
-				req
-			);
+			const {  semester, tahunAjaran } = await getTokenPayload(req);
 
 			if (!className) {
-				return next(
-					new AppError("query class tidak boleh kosong", 400)
-				);
+				return next(new AppError("query class tidak boleh kosong", 400));
 			}
 
 			const rombelWhereClause = { id_tahun_ajaran: tahunAjaran.id };
@@ -625,24 +572,20 @@ export class NilaiKarakterController {
 			}
 
 			if (cat && cat !== "all") {
-				const kelompokKarakter =
-					await prisma.ref_karakter_kategori.findFirst({
-						where: {
-							nama: cat,
-						},
-						include: {
-							ref_kriteria_karakter: {
-								where: {
-									is_aktif: true,
-								},
+				const kelompokKarakter = await prisma.ref_karakter_kategori.findFirst({
+					where: {
+						nama: cat,
+					},
+					include: {
+						ref_kriteria_karakter: {
+							where: {
+								is_aktif: true,
 							},
 						},
-					});
+					},
+				});
 				// console.log(kelompokKarakter);
-				if (
-					kelompokKarakter &&
-					kelompokKarakter.ref_kriteria_karakter
-				) {
+				if (kelompokKarakter && kelompokKarakter.ref_kriteria_karakter) {
 					// const kriteriaList =
 					// 	kelompokKarakter.ref_kriteria_karakter.map((k) => ({
 					// 		id: k.id,
@@ -652,9 +595,7 @@ export class NilaiKarakterController {
 					// };
 					// console.log(kelompokKarakter.ref_kriteria_karakter.map((k) => (k.id)))
 					karakterWhereClause.id = {
-						in: kelompokKarakter.ref_kriteria_karakter.map(
-							(k) => k.id
-						),
+						in: kelompokKarakter.ref_kriteria_karakter.map((k) => k.id),
 					};
 				} else {
 					karakterWhereClause.id = { in: [] };
@@ -662,14 +603,13 @@ export class NilaiKarakterController {
 
 				// karakterWhereClause.is_aktif = true;
 			}
-			const kriteria_karakter =
-				await prisma.ref_kriteria_karakter.findMany({
-					where: karakterWhereClause,
-					include: {
-						ref_karakter_kategori: true,
-						ref_master_kategori: true,
-					},
-				});
+			const kriteria_karakter = await prisma.ref_kriteria_karakter.findMany({
+				where: karakterWhereClause,
+				include: {
+					ref_karakter_kategori: true,
+					ref_master_kategori: true,
+				},
+			});
 
 			const header = kriteria_karakter.map((item) => ({
 				id: item.id,
@@ -679,17 +619,7 @@ export class NilaiKarakterController {
 				basis: item.ref_master_kategori.nama,
 			}));
 
-			const groupHeader = header.reduce((acc, item) => {
-				if (!acc[item.kategori]) {
-					acc[item.kategori] = {
-						items: [],
-						length: 0,
-					};
-				}
-				acc[item.kategori].items.push(item);
-				acc[item.kategori].length = acc[item.kategori].items.length;
-				return acc;
-			}, {});
+			
 
 			// console.log(groupHeader);
 
@@ -702,9 +632,7 @@ export class NilaiKarakterController {
 			karakterWhereClause.id_semester = semester.id;
 			karakterWhereClause.id_tahun_ajaran = tahunAjaran.id;
 			if (!pekan) {
-				return next(
-					new AppError("query pekan tidak boleh kosong", 400)
-				);
+				return next(new AppError("query pekan tidak boleh kosong", 400));
 			}
 			// if (pekan && pekan !== "all") {
 			karakterWhereClause.minggu = parseInt(pekan);
@@ -748,35 +676,20 @@ export class NilaiKarakterController {
 			// 	return acc;
 			// }, {});
 			// console.log(santriList);
-			const santriListWithNilai = santriList.map((santri) => {
-				const nilaiSantri = nilaiMap.filter(
-					(n) => n.id_santri === santri.id
-				);
-				return {
-					...santri,
-					nilai: nilaiSantri,
-				};
-			});
+			
 			// console.log(santriListWithNilai);
-
-			const datas = {
-				header: groupHeader,
-				nilai: santriListWithNilai,
-			};
 
 			// const rowData = []
 
 			const rowData = santriList.map((santri) => {
-				let dataSantri = {
+				const dataSantri = {
 					id: santri.id,
 					nis: santri.nis,
 					nama: santri.nama,
 				};
 				header.forEach((item) => {
 					const nilai = nilaiMap.find(
-						(n) =>
-							n.id_santri === santri.id &&
-							n.karakter_id === item.id
+						(n) => n.id_santri === santri.id && n.karakter_id === item.id
 					);
 					const karakter_nilai = nilai ? nilai.nilai : "";
 					dataSantri[item.nama] = karakter_nilai;
@@ -834,237 +747,13 @@ export class NilaiKarakterController {
 		}
 	};
 
-	static getRombelDetailV2 = async (req, res, next) => {
-		try {
-			const { class: className, type, cat, pekan, bulan } = req.query;
-			const { decoded, semester, tahunAjaran } = await getTokenPayload(
-				req
-			);
-			// console.log("decoded", decoded);
-
-			if (!className) {
-				return next(
-					new AppError("query class tidak boleh kosong", 400)
-				);
-			}
-
-			const rombelWhereClause = { id_tahun_ajaran: tahunAjaran.id };
-			const ruanganKelas = await prisma.ref_kelas.findFirst({
-				where: {
-					kelas: className,
-				},
-			});
-			rombelWhereClause["id_kelas"] = parseInt(ruanganKelas.id);
-
-			const rombel = await prisma.data_rombel.findFirst({
-				where: rombelWhereClause,
-				include: {
-					data_rombel_anggota: {
-						select: {
-							id_santri: true,
-						},
-					},
-				},
-			});
-
-			console.log(rombel);
-
-			const santriIds = rombel.data_rombel_anggota.map(
-				(anggota) => anggota.id_santri
-			);
-
-			const santriList = await prisma.santri.findMany({
-				where: {
-					id: {
-						in: santriIds,
-					},
-				},
-				select: { id: true, nis: true, nama: true },
-			});
-			// pass data santrilist to excel template generator
-			// const nilaiKatakterList =
-			// 	await prisma.data_nilai_karakter.findMany({
-
-			const karakterWhereClause = {};
-			if (type && type !== "all") {
-				if (type === "asrama") {
-					karakterWhereClause.id_basis_lokasi = 25;
-				} else if (type === "sekolah") {
-					karakterWhereClause.id_basis_lokasi = 26;
-				}
-			}
-
-			if (cat && cat !== "all") {
-				const kelompokKarakter =
-					await prisma.ref_karakter_kategori.findFirst({
-						where: {
-							nama: cat,
-						},
-						include: {
-							ref_kriteria_karakter: {
-								where: {
-									is_aktif: true,
-								},
-							},
-						},
-					});
-				// console.log(kelompokKarakter);
-				if (
-					kelompokKarakter &&
-					kelompokKarakter.ref_kriteria_karakter
-				) {
-					// const kriteriaList =
-					// 	kelompokKarakter.ref_kriteria_karakter.map((k) => ({
-					// 		id: k.id,
-					// 	}));
-					// karakterWhereClause.id_kriteria = {
-					// 	in: kriteriaList.map((k) => k.id),
-					// };
-					// console.log(kelompokKarakter.ref_kriteria_karakter.map((k) => (k.id)))
-					karakterWhereClause.id = {
-						in: kelompokKarakter.ref_kriteria_karakter.map(
-							(k) => k.id
-						),
-					};
-				} else {
-					karakterWhereClause.id = { in: [] };
-				}
-
-				// karakterWhereClause.is_aktif = true;
-			}
-			const kriteria_karakter =
-				await prisma.ref_kriteria_karakter.findMany({
-					where: karakterWhereClause,
-					include: {
-						ref_karakter_kategori: true,
-						ref_master_kategori: true,
-					},
-				});
-
-			const header = kriteria_karakter.map((item) => ({
-				id: item.id,
-				kategori: item.ref_karakter_kategori.nama,
-				nama: item.nama,
-				deskripsi: item.deskripsi,
-				basis: item.ref_master_kategori.nama,
-			}));
-
-			const groupHeader = header.reduce((acc, item) => {
-				if (!acc[item.kategori]) {
-					acc[item.kategori] = {
-						items: [],
-						length: 0,
-					};
-				}
-				acc[item.kategori].items.push(item);
-				acc[item.kategori].length = acc[item.kategori].items.length;
-				return acc;
-			}, {});
-
-			// console.log(groupHeader);
-
-			karakterWhereClause.id_santri = {
-				in: santriIds,
-			};
-			karakterWhereClause.id_kriteria = {
-				in: kriteria_karakter.map((k) => k.id),
-			};
-			karakterWhereClause.id_semester = semester.id;
-			karakterWhereClause.id_tahun_ajaran = tahunAjaran.id;
-			if (!pekan) {
-				return next(
-					new AppError("query pekan tidak boleh kosong", 400)
-				);
-			}
-			// if (pekan && pekan !== "all") {
-			karakterWhereClause.minggu = parseInt(pekan);
-			// }
-			if (bulan && bulan !== "all") {
-				karakterWhereClause.bulan = parseInt(bulan);
-			}
-			// console.log(karakterWhereClause);
-			delete karakterWhereClause.id;
-
-			const nilaiSantri = await prisma.data_nilai_karakter.findMany({
-				where: karakterWhereClause,
-				include: {
-					ref_kriteria_karakter: {
-						include: {
-							ref_karakter_kategori: true,
-						},
-					},
-					santri: true,
-				},
-			});
-
-			const nilaiMap = nilaiSantri.map((item) => ({
-				id: item.id,
-				id_santri: item.id_santri,
-				// nama_santri: item.santri.nama,
-				nis_santri: item.santri.nis,
-				nama_santri: item.santri.nama,
-				karakter: item.ref_kriteria_karakter.nama,
-				karakter_id: item.ref_kriteria_karakter.id,
-				kategori: item.ref_kriteria_karakter.ref_karakter_kategori.nama,
-				nilai: item.nilai,
-				// bulan: item.bulan,
-				minggu: item.minggu,
-			}));
-
-			// console.log("niliaMap",nilaiMap);
-			// gabung santriList dengan nilaiMap
-			// const santriMap = santriList.reduce((acc, santri) => {
-			// 	acc[santri.id] = santri;
-			// 	return acc;
-			// }, {});
-			// console.log(santriList);
-			const santriListWithNilai = santriList.map((santri) => {
-				const nilaiSantri = nilaiMap.filter(
-					(n) => n.id_santri === santri.id
-				);
-				return {
-					...santri,
-					nilai: nilaiSantri,
-				};
-			});
-
-			const rowData = santriList.map((santri) => {
-				let dataSantri = {
-					id: santri.id,
-					nis: santri.nis,
-					nama: santri.nama,
-				};
-				header.forEach((item) => {
-					const nilai = nilaiMap.find(
-						(n) =>
-							n.id_santri === santri.id &&
-							n.karakter_id === item.id
-					);
-					const karakter_nilai = nilai ? nilai.nilai : "";
-					dataSantri[item.nama] = karakter_nilai;
-				});
-				return dataSantri;
-			});
-			return res.status(200).json({
-				header,
-				rowData,
-			});
-		} catch (error) {
-			next(new AppError(error.message, 500));
-		}
-	};
-
 	static generateExcelTemplate = async (req, res, next) => {
 		try {
 			const { class: className, type, cat, pekan, bulan } = req.query;
-			const { decoded, semester, tahunAjaran } = await getTokenPayload(
-				req
-			);
+			const {  semester, tahunAjaran } = await getTokenPayload(req);
 
 			if (!className) {
-				return next(
-					new AppError("query class tidak boleh kosong", 400)
-				);
+				return next(new AppError("query class tidak boleh kosong", 400));
 			}
 
 			const rombelWhereClause = { id_tahun_ajaran: tahunAjaran.id };
@@ -1087,7 +776,7 @@ export class NilaiKarakterController {
 				},
 			});
 
-			console.log(rombel);
+			
 
 			const santriIds = rombel.data_rombel_anggota.map(
 				(anggota) => anggota.id_santri
@@ -1115,24 +804,20 @@ export class NilaiKarakterController {
 			}
 
 			if (cat && cat !== "all") {
-				const kelompokKarakter =
-					await prisma.ref_karakter_kategori.findFirst({
-						where: {
-							nama: cat,
-						},
-						include: {
-							ref_kriteria_karakter: {
-								where: {
-									is_aktif: true,
-								},
+				const kelompokKarakter = await prisma.ref_karakter_kategori.findFirst({
+					where: {
+						nama: cat,
+					},
+					include: {
+						ref_kriteria_karakter: {
+							where: {
+								is_aktif: true,
 							},
 						},
-					});
-				console.log(kelompokKarakter);
-				if (
-					kelompokKarakter &&
-					kelompokKarakter.ref_kriteria_karakter
-				) {
+					},
+				});
+				
+				if (kelompokKarakter && kelompokKarakter.ref_kriteria_karakter) {
 					// const kriteriaList =
 					// 	kelompokKarakter.ref_kriteria_karakter.map((k) => ({
 					// 		id: k.id,
@@ -1142,22 +827,19 @@ export class NilaiKarakterController {
 					// };
 					// console.log(kelompokKarakter.ref_kriteria_karakter.map((k) => (k.id)))
 					karakterWhereClause.id = {
-						in: kelompokKarakter.ref_kriteria_karakter.map(
-							(k) => k.id
-						),
+						in: kelompokKarakter.ref_kriteria_karakter.map((k) => k.id),
 					};
 				} else {
 					karakterWhereClause.id = { in: [] };
 				}
 			}
-			const kriteria_karakter =
-				await prisma.ref_kriteria_karakter.findMany({
-					where: karakterWhereClause,
-					include: {
-						ref_karakter_kategori: true,
-						ref_master_kategori: true,
-					},
-				});
+			const kriteria_karakter = await prisma.ref_kriteria_karakter.findMany({
+				where: karakterWhereClause,
+				include: {
+					ref_karakter_kategori: true,
+					ref_master_kategori: true,
+				},
+			});
 
 			const header = kriteria_karakter.map((item) => ({
 				id: item.id,
@@ -1167,7 +849,7 @@ export class NilaiKarakterController {
 				basis: item.ref_master_kategori.nama,
 			}));
 
-			console.log("header", header);
+			
 
 			const groupHeader = header.reduce((acc, item) => {
 				if (!acc[item.kategori]) {
@@ -1192,9 +874,7 @@ export class NilaiKarakterController {
 			karakterWhereClause.id_semester = semester.id;
 			karakterWhereClause.id_tahun_ajaran = tahunAjaran.id;
 			if (!pekan) {
-				return next(
-					new AppError("query pekan tidak boleh kosong", 400)
-				);
+				return next(new AppError("query pekan tidak boleh kosong", 400));
 			}
 			// if (pekan && pekan !== "all") {
 			karakterWhereClause.minggu = parseInt(pekan);
@@ -1230,7 +910,6 @@ export class NilaiKarakterController {
 				// bulan: item.bulan,
 				minggu: item.minggu,
 			}));
-			console.log("niliaMap", nilaiMap);
 
 			// console.log("niliaMap",nilaiMap);
 			// gabung santriList dengan nilaiMap
@@ -1239,39 +918,22 @@ export class NilaiKarakterController {
 			// 	return acc;
 			// }, {});
 			// console.log(santriList);
-			const santriListWithNilai = santriList.map((santri) => {
-				const nilaiSantri = nilaiMap.filter(
-					(n) => n.id_santri === santri.id
-				);
-				return {
-					...santri,
-					nilai: nilaiSantri,
-				};
-			});
 			// console.log(santriListWithNilai);
 
-			const datas = {
-				header: groupHeader,
-				nilai: santriListWithNilai,
-			};
+			
 
 			// const rowData = []
 
 			const rowData = santriList.map((santri) => {
-				let dataSantri = {
+				const dataSantri = {
 					nis: santri.nis,
 					nama: santri.nama,
 				};
-				console.log("santri", santri.id);
 				header.forEach((item) => {
-					console.log("item", item);
 					const nilai = nilaiMap.find(
-						(n) =>
-							n.id_santri === santri.id &&
-							n.karakter_id === item.id
+						(n) => n.id_santri === santri.id && n.karakter_id === item.id
 					);
 
-					console.log("nilai", nilai);
 					const karakter_nilai = nilai ? nilai.nilai : "";
 					dataSantri[item.nama] = karakter_nilai;
 				});
@@ -1328,9 +990,7 @@ export class NilaiKarakterController {
 		try {
 			// const { id } = req.params;
 			const { bulan, minggu, id_santri, id_kriteria, nilai } = req.body;
-			const { decoded, semester, tahunAjaran } = await getTokenPayload(
-				req
-			);
+			const { semester, tahunAjaran } = await getTokenPayload(req);
 
 			// if (!id_santri || !minggu) {
 			// 	return next(new AppError("ID dan nilai tidak boleh kosong", 400));
@@ -1357,20 +1017,19 @@ export class NilaiKarakterController {
 				},
 			});
 
-
 			const existingNilai = await prisma.data_nilai_karakter.findUnique({
-				where:{
+				where: {
 					id_santri_id_tahun_ajaran_id_semester_id_kriteria_id_basis_lokasi_bulan_minggu:
-					{
-						id_santri: santri.id,
-						id_tahun_ajaran: tahunAjaran.id,
-						id_semester: semester.id,
-						id_kriteria: id_kriteria,
-						id_basis_lokasi: karakter.id_basis_lokasi,
-						bulan: parseInt(bulan),
-						minggu: parseInt(minggu),
-					},
-				}
+						{
+							id_santri: santri.id,
+							id_tahun_ajaran: tahunAjaran.id,
+							id_semester: semester.id,
+							id_kriteria: id_kriteria,
+							id_basis_lokasi: karakter.id_basis_lokasi,
+							bulan: parseInt(bulan),
+							minggu: parseInt(minggu),
+						},
+				},
 			});
 
 			if (!existingNilai) {
@@ -1416,20 +1075,14 @@ export class NilaiKarakterController {
 
 	static uploadExcelFile = async (req, res, next) => {
 		try {
-			const { decoded, semester, tahunAjaran } = await getTokenPayload(
-				req
-			);
+			const { semester, tahunAjaran } = await getTokenPayload(req);
 			const { pekan, bulan } = req.query;
 			if (!pekan) {
-				return next(
-					new AppError("Query pekan tidak boleh kosong", 400)
-				);
+				return next(new AppError("Query pekan tidak boleh kosong", 400));
 			}
 
 			if (!bulan) {
-				return next(
-					new AppError("Query bulan tidak boleh kosong", 400)
-				);
+				return next(new AppError("Query bulan tidak boleh kosong", 400));
 			}
 
 			if (!req.file) {
@@ -1449,7 +1102,6 @@ export class NilaiKarakterController {
 			const filteredKeys = keys.filter(
 				(key) => key !== "nis" && key !== "nama"
 			);
-			console.log("filteredKeys", filteredKeys);
 
 			const dictKarakter = await prisma.ref_kriteria_karakter.findMany({
 				where: {
@@ -1469,23 +1121,20 @@ export class NilaiKarakterController {
 			}, {});
 
 			// console.log("keys", keys);
-			let errorData = [];
+			const errorData = [];
 
 			for (const item of data) {
 				try {
 					await prisma.$transaction(async (tx) => {
 						const { nis, nama, ...nilai } = item;
-						console.log("nis", nis);
-						console.log("nama", nama);
-						console.log("nilai", nilai);
 
 						// cari santri berdasarkan nis
 						const santri = await tx.santri.findFirst({
 							where: {
 								nis: nis.toString(),
+								nama: nama.toString(),
 							},
 						});
-						console.log("santri", santri);
 
 						if (!santri) {
 							throw new AppError(
@@ -1511,24 +1160,20 @@ export class NilaiKarakterController {
 							// 			id_kriteria: karakterMap[key]
 							// });
 							// continue
-							const existingNilai =
-								await tx.data_nilai_karakter.findUnique({
-									where: {
-										id_santri_id_tahun_ajaran_id_semester_id_kriteria_id_basis_lokasi_bulan_minggu:
-											{
-												id_santri: santri.id,
-												id_tahun_ajaran: tahunAjaran.id,
-												id_semester: semester.id,
-												id_kriteria:
-													karakterMap[key].id,
-												id_basis_lokasi:
-													karakterMap[key]
-														.basis_lokasi,
-												bulan: parseInt(bulan),
-												minggu: parseInt(pekan),
-											},
-									},
-								});
+							const existingNilai = await tx.data_nilai_karakter.findUnique({
+								where: {
+									id_santri_id_tahun_ajaran_id_semester_id_kriteria_id_basis_lokasi_bulan_minggu:
+										{
+											id_santri: santri.id,
+											id_tahun_ajaran: tahunAjaran.id,
+											id_semester: semester.id,
+											id_kriteria: karakterMap[key].id,
+											id_basis_lokasi: karakterMap[key].basis_lokasi,
+											bulan: parseInt(bulan),
+											minggu: parseInt(pekan),
+										},
+								},
+							});
 							if (existingNilai) {
 								await tx.data_nilai_karakter.update({
 									where: {
@@ -1550,8 +1195,7 @@ export class NilaiKarakterController {
 										id_semester: semester.id,
 										id_tahun_ajaran: tahunAjaran.id,
 										id_kriteria: karakterMap[key].id,
-										id_basis_lokasi:
-											karakterMap[key].basis_lokasi,
+										id_basis_lokasi: karakterMap[key].basis_lokasi,
 									},
 								});
 							}
@@ -1559,7 +1203,6 @@ export class NilaiKarakterController {
 						// cek apakah nilai sudah ada
 					});
 				} catch (error) {
-					console.log("error", error);
 					if (error instanceof AppError) {
 						errorData.push({
 							nis: item.nis,
@@ -1570,9 +1213,7 @@ export class NilaiKarakterController {
 						errorData.push({
 							nis: item.nis,
 							nama: item.nama,
-							error:
-								error.message ||
-								"Terjadi kesalahan saat memproses data",
+							error: error.message || "Terjadi kesalahan saat memproses data",
 						});
 					}
 				}
@@ -1581,7 +1222,7 @@ export class NilaiKarakterController {
 			// console.log(data);
 			// console.log(filePath);
 			res.status(200).json({
-				success: true ? errorData.length === 0 : false,
+				success: errorData.length === 0,
 				message: errorData.length
 					? "Beberapa data gagal diupload"
 					: "Data berhasil diupload",

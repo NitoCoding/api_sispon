@@ -4,7 +4,7 @@ const router = express.Router();
 
 import { MasterKarakterController } from '../controllers/master_karakter.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
-import { createKategoriKarakterValidation,updateKategoriKarakterValidation,createKriteriaKarakterValidation, updateKriteriaKarakterValidation, deleteKriteriaKarakterValidation } from '../validators/master_kategori.validator.js';
+import { createKategoriKarakterValidation,updateKategoriKarakterValidation,createKriteriaKarakterValidation, updateKriteriaKarakterValidation } from '../validators/master_kategori.validator.js';
 import { paramValidation } from '../validators/param.validator.js';
 
 

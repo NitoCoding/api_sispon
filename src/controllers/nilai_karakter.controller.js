@@ -9,32 +9,31 @@ import {
 // const prisma = new PrismaClient();
 
 const GENDER = {
-	Putra : "L",
+	Putra: "L",
 	Putri: "P",
 };
 
 const JENJANG = {
-	SMP : 1,
+	SMP: 1,
 	SMA: 2,
-}
+};
 
 export class NilaiKarakterController {
 	static getAllNilaiKarakter = async (req, res, next) => {
 		try {
 			const { groupbyclass, class: className, type, cat, bulan } = req.query;
-			const {  semester, tahunAjaran } = await getTokenPayload(req);
+			const { semester, tahunAjaran } = await getTokenPayload(req);
 			// console.log(className)
 
 			const rombelWhereClause = { id_tahun_ajaran: tahunAjaran.id };
 			if (className) {
 				// className format className-gender
-				
+
 				const classname = className.split("-")[0];
 				const gender = className.split("-")[1];
 
 				// const {classname, gender} = [parts[0] || "all" , parts[1] ];
-				
-				
+
 				const ruanganKelas = await prisma.ref_kelas.findFirst({
 					where: {
 						kelas: classname,
@@ -228,11 +227,12 @@ export class NilaiKarakterController {
 
 	static getRangkingNilaiKarakter = async (req, res, next) => {
 		try {
-			const { jenjang, gender } = req.query;
-			const {  semester, tahunAjaran } = await getTokenPayload(req);
+			const { jenjang, gender, tipe } = req.query;
+			const { semester, tahunAjaran } = await getTokenPayload(req);
 
 			const normalizedJenjang = jenjang ? jenjang.toUpperCase() : null;
 			const normalizedGender = gender ? gender.toUpperCase() : null;
+
 			const karakterWhereClause = {
 				// id_santri: {
 				// 	in: santriIds,
@@ -240,11 +240,21 @@ export class NilaiKarakterController {
 				id_semester: semester.id,
 				id_tahun_ajaran: tahunAjaran.id,
 				santri: {
-					id_jenjang : normalizedJenjang ? JENJANG[normalizedJenjang] : undefined,
-					jk : normalizedGender ? GENDER[normalizedGender] : undefined,
-				}
-				
+					id_jenjang: normalizedJenjang	
+						? JENJANG[normalizedJenjang]
+						: undefined,
+					jk: normalizedGender ? GENDER[normalizedGender] : undefined,
+				},
 			};
+			
+			if (tipe && tipe !== "all") {
+				if (tipe === "asrama") {
+					karakterWhereClause.id_basis_lokasi = 25;
+				} else if (tipe === "sekolah") {
+					karakterWhereClause.id_basis_lokasi = 26;
+				}
+			}
+
 			const nilaiKatakterList = await prisma.data_nilai_karakter.groupBy({
 				by: ["id_santri"],
 				where: karakterWhereClause,
@@ -299,20 +309,15 @@ export class NilaiKarakterController {
 
 	static getModalData = async (req, res, next) => {
 		try {
-			const { class: className, type, cat, pekan, bulan } = req.query;
-			const {  semester, tahunAjaran } = await getTokenPayload(req);
+			const { id_rombel } = req.params;
+			const { type, cat, pekan, bulan } = req.query;
+			const { semester, tahunAjaran } = await getTokenPayload(req);
 
-			if (!className) {
-				return next(new AppError("query class tidak boleh kosong", 400));
+			if (!id_rombel) {
+				return next(new AppError("params id_rombel tidak boleh kosong", 400));
 			}
 
-			const rombelWhereClause = { id_tahun_ajaran: tahunAjaran.id };
-			const ruanganKelas = await prisma.ref_kelas.findFirst({
-				where: {
-					kelas: className,
-				},
-			});
-			rombelWhereClause["id_kelas"] = parseInt(ruanganKelas.id);
+			const rombelWhereClause = { id: parseInt(id_rombel) };
 
 			const rombel = await prisma.data_rombel.findFirst({
 				where: rombelWhereClause,
@@ -400,7 +405,6 @@ export class NilaiKarakterController {
 				deskripsi: item.deskripsi,
 				basis: item.ref_master_kategori.nama,
 			}));
-
 
 			karakterWhereClause.id_santri = {
 				in: santriIds,
@@ -448,67 +452,29 @@ export class NilaiKarakterController {
 				minggu: item.minggu,
 			}));
 
-
-			const rowData = santriList.map((santri) => {
-				const dataSantri = {
-					id: santri.id,
-					nis: santri.nis,
-					nama: santri.nama,
-				};
-				header.forEach((item) => {
-					const nilai = nilaiMap.find(
-						(n) => n.id_santri === santri.id && n.karakter_id === item.id
-					);
-					const karakter_nilai = nilai ? nilai.nilai : "";
-					dataSantri[item.nama] = karakter_nilai;
+			const groupedNilaiMap = [];
+			santriList.forEach((santri) => {
+				const nilaiSantri = nilaiMap
+					.filter((n) => n.id_santri === santri.id)
+					.map((n) => ({
+						id: n.id,
+						karakter_id: n.karakter_id,
+						karakter: n.karakter,
+						nilai: n.nilai,
+					}));
+				groupedNilaiMap.push({
+					id_santri: santri.id,
+					nis_santri: santri.nis,
+					nama_santri: santri.nama,
+					nilai: nilaiSantri,
 				});
-				return dataSantri;
 			});
 
-			// const x = header.map((item) => {
-			// const y = santriList.map((santri) => {
-			// 	const nilai = nilaiMap.find(
-			// 		(n) =>
-			// 			n.id_santri === santri.id &&
-			// 			n.karakter_id === item.id
-			// 	);
-			// 	return {
-			// 		id: item.id,
-			// 		nama: item.nama,
-			// 		kategori: item.kategori,
-			// 		nilai: nilai ? nilai.nilai : "",
-			// 		// bulan: nilai ? nilai.bulan : "",
-			// 		minggu: nilai ? nilai.minggu : "",
-			// 		nis_santri: santri.nis,
-			// 		nama_santri: santri.nama,
-			// 	};
-			// })
-			// return {
-			// 	nis: "",
-			// 	nama: "",
-			// }
-			// });
+			// const rowData = {...groupedNilaiMap };
 
-			// console.log("data", x);
-			// console.log("header", header);
-			// rowData.push(...x);
-			// console.log("rowData", rowData);
-
-			// return await writeExcelFilewithSubheader(
-			// 	res,
-			// 	data,
-			// 	"template_nilai_karakter"
-			// );
-			// return await writeExcelFilewithSubheader2(
-			// 	res,
-			// 	groupHeader,
-			// 	r,
-			// 	"template_nilai_karakter",
-			// 	// "Data Nilai Karakter"
-			// )
 			return res.status(200).json({
 				header,
-				rowData,
+				rowData : groupedNilaiMap,
 			});
 		} catch (error) {
 			next(new AppError(error.message, 500));
@@ -518,7 +484,7 @@ export class NilaiKarakterController {
 	static getRombelDetail = async (req, res, next) => {
 		try {
 			const { class: className, type, cat, pekan, bulan } = req.query;
-			const {  semester, tahunAjaran } = await getTokenPayload(req);
+			const { semester, tahunAjaran } = await getTokenPayload(req);
 
 			if (!className) {
 				return next(new AppError("query class tidak boleh kosong", 400));
@@ -618,8 +584,6 @@ export class NilaiKarakterController {
 				deskripsi: item.deskripsi,
 				basis: item.ref_master_kategori.nama,
 			}));
-
-			
 
 			// console.log(groupHeader);
 
@@ -676,7 +640,7 @@ export class NilaiKarakterController {
 			// 	return acc;
 			// }, {});
 			// console.log(santriList);
-			
+
 			// console.log(santriListWithNilai);
 
 			// const rowData = []
@@ -750,7 +714,7 @@ export class NilaiKarakterController {
 	static generateExcelTemplate = async (req, res, next) => {
 		try {
 			const { class: className, type, cat, pekan, bulan } = req.query;
-			const {  semester, tahunAjaran } = await getTokenPayload(req);
+			const { semester, tahunAjaran } = await getTokenPayload(req);
 
 			if (!className) {
 				return next(new AppError("query class tidak boleh kosong", 400));
@@ -775,8 +739,6 @@ export class NilaiKarakterController {
 					ref_kelas: true,
 				},
 			});
-
-			
 
 			const santriIds = rombel.data_rombel_anggota.map(
 				(anggota) => anggota.id_santri
@@ -816,7 +778,7 @@ export class NilaiKarakterController {
 						},
 					},
 				});
-				
+
 				if (kelompokKarakter && kelompokKarakter.ref_kriteria_karakter) {
 					// const kriteriaList =
 					// 	kelompokKarakter.ref_kriteria_karakter.map((k) => ({
@@ -848,8 +810,6 @@ export class NilaiKarakterController {
 				deskripsi: item.deskripsi,
 				basis: item.ref_master_kategori.nama,
 			}));
-
-			
 
 			const groupHeader = header.reduce((acc, item) => {
 				if (!acc[item.kategori]) {
@@ -919,8 +879,6 @@ export class NilaiKarakterController {
 			// }, {});
 			// console.log(santriList);
 			// console.log(santriListWithNilai);
-
-			
 
 			// const rowData = []
 

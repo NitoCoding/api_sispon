@@ -11,7 +11,7 @@ router.use(authenticate);
 router.get('/', NilaiKarakterController.getAllNilaiKarakter);
 router.get('/rangking', NilaiKarakterController.getRangkingNilaiKarakter);
 router.get('/download-template', NilaiKarakterController.generateExcelTemplate);
-router.get('/modal', NilaiKarakterController.getModalData);
+router.get('/modal/:id_rombel', NilaiKarakterController.getModalData);
 router.get('/rombel-detail/:id_rombel/:id_kategori', NilaiKarakterController.getRombelDetail);
 router.post('/upload',upload.single('file'), NilaiKarakterController.uploadExcelFile);
 router.post('/edit', NilaiKarakterController.editNilaiKarakter)
